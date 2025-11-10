@@ -1,7 +1,7 @@
 #include <cstdio>
-#include <core/CPath.hpp>
-#include <core/CTime.hpp>
-#include <core/CFile.hpp>
+#include <lap/core/CPath.hpp>
+#include <lap/core/CTime.hpp>
+#include <lap/core/CFile.hpp>
 #include "CReadAccessor.hpp"
 #include "CReadWriteAccessor.hpp"
 #include "CFileStorage.hpp"

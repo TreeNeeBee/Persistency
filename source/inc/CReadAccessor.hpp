@@ -10,8 +10,8 @@
 #ifndef LAP_PERSISTENCY_READACCESSOR_HPP
 #define LAP_PERSISTENCY_READACCESSOR_HPP
 
-#include <core/CTime.hpp>
-#include <core/CMemory.hpp>
+#include <lap/core/CTime.hpp>
+#include <lap/core/CMemory.hpp>
 
 #include "CFileStorage.hpp"
 #include "CDataType.hpp"

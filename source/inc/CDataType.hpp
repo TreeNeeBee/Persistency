@@ -13,10 +13,10 @@
 #include <sstream>
 
 // core
-#include <core/CTypedef.hpp>
-#include <core/CString.hpp>
-#include <core/CVariant.hpp>
-#include <log/CLog.hpp>
+#include <lap/core/CTypedef.hpp>
+#include <lap/core/CString.hpp>
+#include <lap/core/CVariant.hpp>
+#include <lap/log/CLog.hpp>
 
 // persistency common
 #include "CPerErrorDomain.hpp"

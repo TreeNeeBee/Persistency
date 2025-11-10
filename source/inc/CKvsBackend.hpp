@@ -10,9 +10,9 @@
 #ifndef LAP_PERSISTENCY_KVSBACKEND_HPP
 #define LAP_PERSISTENCY_KVSBACKEND_HPP
 
-#include <core/CResult.hpp>
-#include <core/CString.hpp>
-#include <core/CMemory.hpp>
+#include <lap/core/CResult.hpp>
+#include <lap/core/CString.hpp>
+#include <lap/core/CMemory.hpp>
 
 #include "CDataType.hpp"
 

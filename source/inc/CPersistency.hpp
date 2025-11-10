@@ -10,8 +10,8 @@
 #ifndef LAP_PERSISTENCY_PERSISTENCYCLIENT_HPP
 #define LAP_PERSISTENCY_PERSISTENCYCLIENT_HPP
 
-#include <core/CCore.hpp>
-#include <log/CLog.hpp>
+#include <lap/core/CCore.hpp>
+#include <lap/log/CLog.hpp>
 
 #define LAP_DEBUG
 

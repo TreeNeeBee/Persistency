@@ -1,7 +1,7 @@
 #ifndef LAP_PERSISTENCY_KVSPROPERTYBACKEND_HPP_
 #define LAP_PERSISTENCY_KVSPROPERTYBACKEND_HPP_
 
-#include <core/CMemory.hpp>
+#include <lap/core/CMemory.hpp>
 
 #include "CDataType.hpp"
 #include "CKvsBackend.hpp"

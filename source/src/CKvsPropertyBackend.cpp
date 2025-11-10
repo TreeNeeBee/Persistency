@@ -32,7 +32,7 @@ namespace util
         template < typename T > 
         using SHM_Alloc = boost::container::scoped_allocator_adaptor< bip::allocator< T, SHM_Manager > >;
 
-    using SHM_String = bip::basic_string< core::Char, std::char_traits< core::Char >, SHM_Alloc< core::Char > >;
+        using SHM_String = bip::basic_string< core::Char, std::char_traits< core::Char >, SHM_Alloc< core::Char > >;
 
         template < typename K, typename V, typename Hash = std::hash<K>, typename Cmp = ::std::equal_to<K> >
         using SHM_Map = ::boost::unordered_map< K, V, Hash, Cmp, SHM_Alloc< std::pair< K const, V > > >;

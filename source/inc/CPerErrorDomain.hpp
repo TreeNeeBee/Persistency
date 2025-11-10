@@ -13,9 +13,9 @@
 #include <exception>
 #include <cerrno>
 #include <cstring>
-#include <core/CErrorCode.hpp>
-#include <core/CException.hpp>
-#include <core/CMemory.hpp>
+#include <lap/core/CErrorCode.hpp>
+#include <lap/core/CException.hpp>
+#include <lap/core/CMemory.hpp>
 
 #include "CDataType.hpp"
 

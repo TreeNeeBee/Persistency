@@ -12,8 +12,8 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <core/CResult.hpp>
-#include <core/CMemory.hpp>
+#include <lap/core/CResult.hpp>
+#include <lap/core/CMemory.hpp>
 
 #include "CDataType.hpp"
 #include "CKvsBackend.hpp"

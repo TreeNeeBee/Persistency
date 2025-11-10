@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h>
 
-#include <core/CCore.hpp>
+#include <lap/core/CCore.hpp>
 #include "CPersistency.hpp"
 
 ::lap::core::SharedHandle< ::lap::pm::FileStorage > testFS;

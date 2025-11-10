@@ -62,17 +62,17 @@ void testBasicOperations() {
     std::cout << "\nReading values...\n";
     auto int8_result = backend.GetValue("int8_key");
     if (int8_result.HasValue()) {
-        std::cout << "int8_key = " << static_cast<int>(boost::get<Int8>(int8_result.Value())) << "\n";
+        std::cout << "int8_key = " << static_cast<int>(std::get<Int8>(int8_result.Value())) << "\n";
     }
     
     auto string_result = backend.GetValue("string_key");
     if (string_result.HasValue()) {
-        std::cout << "string_key = " << boost::get<String>(string_result.Value()) << "\n";
+        std::cout << "string_key = " << std::get<String>(string_result.Value()) << "\n";
     }
     
     auto double_result = backend.GetValue("double_key");
     if (double_result.HasValue()) {
-        std::cout << std::setprecision(15) << "double_key = " << boost::get<Double>(double_result.Value()) << "\n";
+        std::cout << std::setprecision(15) << "double_key = " << std::get<Double>(double_result.Value()) << "\n";
     }
     
     // 测试KeyExists
@@ -95,7 +95,7 @@ void testBasicOperations() {
     std::cout << "\nUpdating int32_key...\n";
     backend.SetValue("int32_key", KvsDataType(static_cast<Int32>(999)));
     auto updated = backend.GetValue("int32_key");
-    std::cout << "Updated int32_key = " << boost::get<Int32>(updated.Value()) << "\n";
+    std::cout << "Updated int32_key = " << std::get<Int32>(updated.Value()) << "\n";
     
     // 测试删除
     std::cout << "\nDeleting bool_key...\n";
@@ -222,15 +222,15 @@ void testTypeEncoding() {
     
     backend.SetValue("test_key", KvsDataType(static_cast<Int32>(123)));
     auto result1 = backend.GetValue("test_key");
-    std::cout << "First (Int32): " << boost::get<Int32>(result1.Value()) << "\n";
+    std::cout << "First (Int32): " << std::get<Int32>(result1.Value()) << "\n";
     
     backend.SetValue("test_key", KvsDataType(String("String value")));
     auto result2 = backend.GetValue("test_key");
-    std::cout << "Second (String): " << boost::get<String>(result2.Value()) << "\n";
+    std::cout << "Second (String): " << std::get<String>(result2.Value()) << "\n";
     
     backend.SetValue("test_key", KvsDataType(3.14159));
     auto result3 = backend.GetValue("test_key");
-    std::cout << "Third (Double): " << std::setprecision(10) << boost::get<Double>(result3.Value()) << "\n";
+    std::cout << "Third (Double): " << std::setprecision(10) << std::get<Double>(result3.Value()) << "\n";
     
     std::cout << "✓ Type encoding works correctly\n";
 }
@@ -255,14 +255,14 @@ void testPersistence() {
         
         auto result1 = backend.GetValue("persist_key1");
         if (result1.HasValue()) {
-            std::cout << "persist_key1 = " << boost::get<Int32>(result1.Value()) << "\n";
+            std::cout << "persist_key1 = " << std::get<Int32>(result1.Value()) << "\n";
         } else {
             std::cout << "❌ Failed to read persist_key1\n";
         }
         
         auto result2 = backend.GetValue("persist_key2");
         if (result2.HasValue()) {
-            std::cout << "persist_key2 = " << boost::get<String>(result2.Value()) << "\n";
+            std::cout << "persist_key2 = " << std::get<String>(result2.Value()) << "\n";
         } else {
             std::cout << "❌ Failed to read persist_key2\n";
         }
@@ -296,7 +296,7 @@ void testSoftDelete() {
     
     if (recovered.Value()) {
         auto value = backend.GetValue("delete_test");
-        std::cout << "Recovered value: " << boost::get<Int32>(value.Value()) << "\n";
+        std::cout << "Recovered value: " << std::get<Int32>(value.Value()) << "\n";
     }
     
     std::cout << "✓ Soft delete and recovery work correctly\n";

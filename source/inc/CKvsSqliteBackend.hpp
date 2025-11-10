@@ -11,8 +11,8 @@
 #define LAP_PERSISTENCY_KVSSQLITEBACKEND_HPP
 
 #include <sqlite3.h>
-#include <core/CMemory.hpp>
-#include <core/CSync.hpp>
+#include <lap/core/CMemory.hpp>
+#include <lap/core/CSync.hpp>
 #include <memory>
 
 #include "CDataType.hpp"

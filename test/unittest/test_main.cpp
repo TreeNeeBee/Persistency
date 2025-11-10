@@ -6,7 +6,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <log/CLog.hpp>
+#include <lap/log/CLog.hpp>
 #include "CPersistency.hpp"
 
 int main(int argc, char **argv)

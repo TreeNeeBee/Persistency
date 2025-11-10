@@ -11,10 +11,10 @@
 #define LAP_PERSISTENCY_FILESTORAGE_HPP
 
 #include <unordered_map>
-#include <core/CResult.hpp>
-#include <core/CPath.hpp>
-#include <core/CMemory.hpp>
-#include <core/CSync.hpp>
+#include <lap/core/CResult.hpp>
+#include <lap/core/CPath.hpp>
+#include <lap/core/CMemory.hpp>
+#include <lap/core/CSync.hpp>
 #include <boost/crc.hpp>
 #include <boost/filesystem.hpp>
 

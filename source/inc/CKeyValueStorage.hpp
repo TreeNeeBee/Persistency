@@ -10,7 +10,7 @@
 #ifndef LAP_PERSISTENCY_KEYVALUESTORAGE_HPP
 #define LAP_PERSISTENCY_KEYVALUESTORAGE_HPP
 
-#include <core/CMemory.hpp>
+#include <lap/core/CMemory.hpp>
 
 #include "CDataType.hpp"
 

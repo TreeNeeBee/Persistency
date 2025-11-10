@@ -10,10 +10,10 @@
 #ifndef LAP_PERSISTENCY_PERSISTENCYMANAGER_HPP
 #define LAP_PERSISTENCY_PERSISTENCYMANAGER_HPP
 
-#include <core/CInstanceSpecifier.hpp>
-#include <core/CResult.hpp>
-#include <core/CMemory.hpp>
-#include <core/CSync.hpp>
+#include <lap/core/CInstanceSpecifier.hpp>
+#include <lap/core/CResult.hpp>
+#include <lap/core/CMemory.hpp>
+#include <lap/core/CSync.hpp>
 
 #include "CDataType.hpp"
 

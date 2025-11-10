@@ -1,4 +1,4 @@
-cmake_minimum_required ( VERSION "3.13.2" )
+cmake_minimum_required ( VERSION "3.10.2" )
 include ( ../../BuildTemplate/Config.cmake.in )
 
 project ( Persistency )
@@ -6,68 +6,76 @@ project ( Persistency )
 set ( MODULE_NAME "Persistency" )
 set ( MODULE_VERNO 1.0.0 )
 
-set ( MODULE_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
-
 set ( Boost_USE_STATIC_LIBS OFF )
 set ( Boost_USE_MULTITHREADED ON )
 
 find_package ( Boost REQUIRED COMPONENTS system filesystem thread regex )
 
-set ( MODULE_SOURCE_CXX_DIR ${MODULE_ROOT_DIR}/source )
+set ( MODULE_EXTERNAL_INCLUDE_DIR /usr/local/include )
+set ( MODULE_EXTERNAL_LIB_DIR /usr/local/lib )
 
-# Manually specify source files to exclude problematic daemon files
-file ( GLOB_RECURSE LOCAL_LIB_CXX_HEADERS CONFIGURE_DEPENDS ${MODULE_SOURCE_CXX_DIR}/*.h* )
-file ( GLOB_RECURSE LOCAL_LIB_CXX_SOURCES CONFIGURE_DEPENDS ${MODULE_SOURCE_CXX_DIR}/*.c* )
-
-# Remove client files (they have their own executable)
-list ( REMOVE_ITEM LOCAL_LIB_CXX_SOURCES 
-    ${MODULE_SOURCE_CXX_DIR}/client/CPropertyClient.cpp
-    ${MODULE_SOURCE_CXX_DIR}/client/property_main.cpp
-    ${MODULE_SOURCE_CXX_DIR}/daemon/CDaemonManager.cpp
-)
-
-# Clear MODULE_SOURCE_CXX_DIR to prevent double GLOB in SharedLibrary.cmake.in
-unset ( MODULE_SOURCE_CXX_DIR )
-
-# Create symlinks for headers to match include structure
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
-file(CREATE_LINK ${CMAKE_SOURCE_DIR}/modules/Core/source/inc 
-     ${CMAKE_CURRENT_BINARY_DIR}/include/core SYMBOLIC)
-file(CREATE_LINK ${CMAKE_SOURCE_DIR}/modules/LogAndTrace/source/inc 
-     ${CMAKE_CURRENT_BINARY_DIR}/include/log SYMBOLIC)
-
-# Also provide `lap/` prefixed include layout used by some new files
+# Build Persistency against local Modules/Core and LogAndTrace outputs
+# Create symlinks for headers to match include structure (lap/core and lap/log)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/lap)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/modules/Core/source/inc 
      ${CMAKE_CURRENT_BINARY_DIR}/include/lap/core SYMBOLIC)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/modules/LogAndTrace/source/inc 
      ${CMAKE_CURRENT_BINARY_DIR}/include/lap/log SYMBOLIC)
 
-# Add the include directory with symlinks
-set ( MODULE_EXTERNAL_INCLUDE_DIR 
-    ${CMAKE_CURRENT_BINARY_DIR}/include
-)
+set ( CORE_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include )
+set ( CORE_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+list ( APPEND MODULE_EXTERNAL_INCLUDE_DIR ${CORE_INCLUDE_DIR} )
+list ( APPEND MODULE_EXTERNAL_LIB_DIR ${CORE_LIB_DIR} )
+set ( MODULE_EXTERNAL_LIB ${PLATFORM_SYSTEM_TARGET}_core ${PLATFORM_SYSTEM_TARGET}_log dlt sqlite3 Threads::Threads Boost::system Boost::filesystem Boost::thread Boost::regex rt )
 
-# set ( ENABLE_BUILD_PROTOBUF ON CACHE BOOL "Build persistency protobuf" FORCE )
-# set ( MODULE_PROTO_DIR ${MODULE_ROOT_DIR}/doc )
-# include ( ../../BuildTemplate/Protobuf.cmake.in )
-
-set ( MODULE_EXTERNAL_LIB pthread Boost::system Boost::filesystem Boost::thread Boost::regex rt sqlite3 ${PLATFORM_SYSTEM_TARGET}_core ${PLATFORM_SYSTEM_TARGET}_log ${LOCAL_PROTO_NAME} )
+set ( MODULE_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
+set ( MODULE_SOURCE_CXX_DIR ${MODULE_ROOT_DIR}/source )
 set ( ENABLE_BUILD_SHARED_LIBRARY ON CACHE BOOL "Build persistency shared library" FORCE )
 set ( ENABLE_BUILD_WITH_PLATFORM_PREX ON )
 include ( ../../BuildTemplate/SharedLibrary.cmake.in )
 
-enable_testing()
-find_package ( GTest REQUIRED )
-include_directories( ${GTEST_INCLUDE_DIRS} )
+# Ensure the persistency library exports its symbols for consumers (tests, examples)
+# Override global hidden visibility for this target only
+set_target_properties(${PLATFORM_SYSTEM_TARGET}_persistency PROPERTIES
+    CXX_VISIBILITY_PRESET default
+    VISIBILITY_INLINES_HIDDEN OFF
+)
 
-# Enable unit tests
+# Unit tests
 set ( MODULE_TEST_DIR ${MODULE_ROOT_DIR}/test )
-set ( ENABLE_BUILD_TEST ON CACHE BOOL "Build persistency test" FORCE )
+set ( ENABLE_BUILD_TEST ON CACHE BOOL "Build persistency tests" FORCE )
 set ( ENABLE_BUILD_UNITTEST ON CACHE BOOL "Build persistency unit tests" FORCE )
-set ( MODULE_EXTERNAL_TEST_LIB ${PLATFORM_SYSTEM_TARGET}_core ${PLATFORM_SYSTEM_TARGET}_log ${PLATFORM_SYSTEM_TARGET}_persistency Threads::Threads dlt sqlite3 Boost::filesystem Boost::regex GTest::GTest GTest::Main )
+# Use GTest::GTest instead of GTest::Main since we have custom main function
+set ( MODULE_EXTERNAL_TEST_LIB ${PLATFORM_SYSTEM_TARGET}_core ${PLATFORM_SYSTEM_TARGET}_log ${PLATFORM_SYSTEM_TARGET}_persistency Threads::Threads dlt sqlite3 Boost::filesystem Boost::regex GTest::GTest )
 
 include ( ../../BuildTemplate/Test.cmake.in )
 
 # Register tests with CTest
 add_test(NAME persistency_tests COMMAND persistency_test)
+
+# Build examples
+set ( ENABLE_MODULE_EXAMPLES ON )
+
+if ( ENABLE_MODULE_EXAMPLES )
+    set ( EXAMPLES_DIR ${MODULE_TEST_DIR}/examples )
+    
+    set ( EXAMPLE_SOURCES 
+        ${EXAMPLES_DIR}/sqlite_backend_demo.cpp
+        ${EXAMPLES_DIR}/test_sqlite_basic.cpp
+    )
+    
+    set ( EXAMPLE_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${LOCAL_LIB_INCLUDE_DIRS} )
+    set ( EXAMPLE_LIB ${PLATFORM_SYSTEM_TARGET}_core ${PLATFORM_SYSTEM_TARGET}_log ${PLATFORM_SYSTEM_TARGET}_persistency Threads::Threads sqlite3 Boost::filesystem Boost::regex )
+    
+    include_directories ( ${SDK_INCLUDE_DIR} ${EXAMPLE_INCLUDE_DIRS} ${MODULE_EXTERNAL_INCLUDE_DIR} )
+    link_directories ( ${SDK_LIB_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${MODULE_EXTERNAL_LIB_DIR} )
+    
+    foreach ( EXAMPLE_SRC ${EXAMPLE_SOURCES} )
+        get_filename_component ( EXAMPLE_NAME ${EXAMPLE_SRC} NAME_WE )
+        
+        add_executable ( ${EXAMPLE_NAME} ${EXAMPLE_SRC} )
+        target_link_libraries ( ${EXAMPLE_NAME} PRIVATE ${EXAMPLE_LIB} )
+        
+        message ( STATUS "Added example: ${EXAMPLE_NAME}" )
+    endforeach ()
+endif ()
