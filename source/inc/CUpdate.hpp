@@ -14,11 +14,33 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
-    void                        RegisterApplicationDataUpdateCallback ( std::function< void( const core::InstanceSpecifier &storage, core::String version )> appDataUpdateCallback ) noexcept;
-    core::Result<void>          UpdatePersistency () noexcept;
-    core::Result<void>          ResetPersistency () noexcept;
+    // Recovery report kinds for redundancy callbacks
+    enum class RecoveryReportKind : core::UInt32 
+    {
+        kStorageLocationLost = 0,
+        kRedundancyLost = 1,
+        kStorageLocationRestored = 2,
+        kRedundancyRestored = 3
+    };
+
+    // Update and Installation APIs
+    void                        RegisterDataUpdateIndication( std::function<void()> callback ) noexcept;
+    void                        RegisterApplicationDataUpdateCallback( std::function<void(const core::InstanceSpecifier&)> appDataUpdateCallback ) noexcept;
+    core::Result<void>          UpdatePersistency() noexcept;
+    core::Result<void>          CleanUpPersistency() noexcept;
+    core::Result<void>          ResetPersistency() noexcept;
+    core::Result<core::Bool>    CheckForManifestUpdate() noexcept;
+    core::Result<void>          ReloadPersistencyManifest() noexcept;
+
+    // Redundancy and Recovery APIs
+    void                        RegisterRecoveryReportCallback( 
+                                    std::function<void(
+                                        const core::InstanceSpecifier&,
+                                        RecoveryReportKind
+                                    )> callback 
+                                ) noexcept;
 }
 }
 

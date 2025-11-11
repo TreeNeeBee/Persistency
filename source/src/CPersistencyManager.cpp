@@ -5,7 +5,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     core::Bool CPersistencyManager::initialize() noexcept
     {
@@ -56,7 +56,7 @@ namespace pm
         core::StringView strFolder{ indicate.ToString() };
 
         if ( strFolder.empty() ) {
-            LAP_PM_LOG_WARN << "CPersistencyManager::getFileStorage with invalid path " 
+            LAP_PER_LOG_WARN << "CPersistencyManager::getFileStorage with invalid path " 
                                 << strFolder.data()
                                 << ", try to use default";
 
@@ -84,7 +84,7 @@ namespace pm
 
                     return result::FromValue( fs );
                 } else {
-                    LAP_PM_LOG_WARN << "CPersistencyManager::getFileStorage can not create or access with "
+                    LAP_PER_LOG_WARN << "CPersistencyManager::getFileStorage can not create or access with "
                                         << strFolder.data()
                                         << ", try to use default";
                     return result::FromError( PerErrc::kStorageNotFound );
@@ -141,7 +141,7 @@ namespace pm
         core::StringView strFolder{ indicate.ToString() };
 
         if ( strFolder.empty() ) {
-            LAP_PM_LOG_WARN << "CPersistencyManager::getKvsStorage with invalid path " 
+            LAP_PER_LOG_WARN << "CPersistencyManager::getKvsStorage with invalid path " 
                                 << strFolder.data()
                                 << ", try to use default";
 
@@ -170,7 +170,7 @@ namespace pm
 
                     return result::FromValue( kvs );
                 } else {
-                    LAP_PM_LOG_WARN << "CPersistencyManager::getKvsStorage can not create or access with "
+                    LAP_PER_LOG_WARN << "CPersistencyManager::getKvsStorage can not create or access with "
                                         << strFolder.data()
                                         << ", try to use default";
                     return result::FromError( PerErrc::kStorageNotFound );

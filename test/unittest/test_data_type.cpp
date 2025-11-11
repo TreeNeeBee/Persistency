@@ -9,7 +9,7 @@
 #include <string>
 #include "CDataType.hpp"
 
-using namespace lap::pm;
+using namespace lap::per;
 using namespace lap::core;
 
 class DataTypeTest : public ::testing::Test {

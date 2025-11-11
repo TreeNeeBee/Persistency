@@ -5,7 +5,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     // ==================== Constructor/Destructor ====================
     
@@ -16,7 +16,7 @@ namespace pm
             auto result = initializeDatabase();
             if( !result.HasValue() )
             {
-                LAP_PM_LOG_ERROR << "Failed to initialize database: " << core::StringView(m_strFile);
+                LAP_PER_LOG_ERROR << "Failed to initialize database: " << core::StringView(m_strFile);
                 return;
             }
         }
@@ -25,13 +25,13 @@ namespace pm
             auto result = prepareStatements();
             if( !result.HasValue() )
             {
-                LAP_PM_LOG_ERROR << "Failed to prepare statements";
+                LAP_PER_LOG_ERROR << "Failed to prepare statements";
                 return;
             }
         }
         
         m_bAvailable = true;
-        LAP_PM_LOG_INFO << "SQLite backend initialized successfully: " << core::StringView(m_strFile);
+        LAP_PER_LOG_INFO << "SQLite backend initialized successfully: " << core::StringView(m_strFile);
     }
 
     KvsSqliteBackend::KvsSqliteBackend( KvsSqliteBackend&& kvs )
@@ -70,7 +70,7 @@ namespace pm
         {
             sqlite3_close( m_pDB );
             m_pDB = nullptr;
-            LAP_PM_LOG_DEBUG << "SQLite database closed: " << core::StringView(m_strFile);
+            LAP_PER_LOG_DEBUG << "SQLite database closed: " << core::StringView(m_strFile);
         }
     }
 
@@ -86,7 +86,7 @@ namespace pm
         
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to open SQLite database: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to open SQLite database: " << sqlite3_errmsg( m_pDB );
             if( m_pDB )
             {
                 sqlite3_close( m_pDB );
@@ -100,7 +100,7 @@ namespace pm
         rc = sqlite3_exec( m_pDB, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &errMsg );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_WARN << "Failed to enable WAL mode: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_WARN << "Failed to enable WAL mode: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
         }
         
@@ -108,7 +108,7 @@ namespace pm
         rc = sqlite3_exec( m_pDB, "PRAGMA synchronous=NORMAL;", nullptr, nullptr, &errMsg );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_WARN << "Failed to set synchronous mode: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_WARN << "Failed to set synchronous mode: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
         }
         
@@ -116,7 +116,7 @@ namespace pm
         rc = sqlite3_exec( m_pDB, "PRAGMA cache_size=-10000;", nullptr, nullptr, &errMsg );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_WARN << "Failed to set cache size: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_WARN << "Failed to set cache size: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
         }
         
@@ -124,7 +124,7 @@ namespace pm
         rc = sqlite3_exec( m_pDB, "PRAGMA mmap_size=67108864;", nullptr, nullptr, &errMsg );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_WARN << "Failed to set mmap size: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_WARN << "Failed to set mmap size: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
         }
         
@@ -139,7 +139,7 @@ namespace pm
         rc = sqlite3_exec( m_pDB, createTableSQL, nullptr, nullptr, &errMsg );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to create table: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_ERROR << "Failed to create table: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
@@ -149,7 +149,7 @@ namespace pm
         rc = sqlite3_exec( m_pDB, createIndexSQL, nullptr, nullptr, &errMsg );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_WARN << "Failed to create index: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_WARN << "Failed to create index: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
         }
         
@@ -169,7 +169,7 @@ namespace pm
         rc = sqlite3_prepare_v2( m_pDB, insertSQL, -1, &m_pStmtInsert, nullptr );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to prepare insert statement: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to prepare insert statement: " << sqlite3_errmsg( m_pDB );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
         
@@ -178,7 +178,7 @@ namespace pm
         rc = sqlite3_prepare_v2( m_pDB, updateSQL, -1, &m_pStmtUpdate, nullptr );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to prepare update statement: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to prepare update statement: " << sqlite3_errmsg( m_pDB );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
         
@@ -187,7 +187,7 @@ namespace pm
         rc = sqlite3_prepare_v2( m_pDB, selectSQL, -1, &m_pStmtSelect, nullptr );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to prepare select statement: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to prepare select statement: " << sqlite3_errmsg( m_pDB );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
         
@@ -196,7 +196,7 @@ namespace pm
         rc = sqlite3_prepare_v2( m_pDB, existsSQL, -1, &m_pStmtExists, nullptr );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to prepare exists statement: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to prepare exists statement: " << sqlite3_errmsg( m_pDB );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
         
@@ -205,7 +205,7 @@ namespace pm
         rc = sqlite3_prepare_v2( m_pDB, deleteSQL, -1, &m_pStmtDelete, nullptr );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to prepare delete statement: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to prepare delete statement: " << sqlite3_errmsg( m_pDB );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
         
@@ -214,7 +214,7 @@ namespace pm
         rc = sqlite3_prepare_v2( m_pDB, getAllSQL, -1, &m_pStmtGetAll, nullptr );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to prepare getall statement: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to prepare getall statement: " << sqlite3_errmsg( m_pDB );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
         
@@ -245,7 +245,7 @@ namespace pm
         
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to begin transaction: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_ERROR << "Failed to begin transaction: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
@@ -266,7 +266,7 @@ namespace pm
         
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to commit transaction: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_ERROR << "Failed to commit transaction: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
@@ -287,7 +287,7 @@ namespace pm
         
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to rollback transaction: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_ERROR << "Failed to rollback transaction: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
@@ -325,7 +325,7 @@ namespace pm
             case 10: oss << ::lap::core::get<core::Double>( value );  break;
             case 11: oss << ::lap::core::get<core::String>( value );  break;
             default:
-                LAP_PM_LOG_ERROR << "Unknown variant type: " << ::lap::core::GetVariantIndex( value );
+                LAP_PER_LOG_ERROR << "Unknown variant type: " << ::lap::core::GetVariantIndex( value );
                 break;
         }
         
@@ -361,13 +361,13 @@ namespace pm
                 case 10: return core::Result< KvsDataType >::FromValue( static_cast<core::Double>( ::std::stod( core::String( dataStr ) ) ) );
                 case 11: return core::Result< KvsDataType >::FromValue( core::String( dataStr ) );
                 default:
-                    LAP_PM_LOG_ERROR << "Invalid type index: " << typeIndex;
+                    LAP_PER_LOG_ERROR << "Invalid type index: " << typeIndex;
                     return core::Result< KvsDataType >::FromError( PerErrc::kIntegrityCorrupted );
             }
         }
         catch( const ::std::exception& e )
         {
-            LAP_PM_LOG_ERROR << "Failed to decode value: " << e.what();
+            LAP_PER_LOG_ERROR << "Failed to decode value: " << e.what();
             return core::Result< KvsDataType >::FromError( PerErrc::kIntegrityCorrupted );
         }
     }
@@ -401,7 +401,7 @@ namespace pm
         
         if( rc != SQLITE_DONE )
         {
-            LAP_PM_LOG_ERROR << "Failed to get all keys: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to get all keys: " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
         
@@ -434,7 +434,7 @@ namespace pm
         }
         else
         {
-            LAP_PM_LOG_ERROR << "Failed to check key existence: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to check key existence: " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
     }
@@ -460,7 +460,7 @@ namespace pm
             const char* encodedValue = reinterpret_cast<const char*>( sqlite3_column_text( m_pStmtSelect, 0 ) );
             if( !encodedValue )
             {
-                LAP_PM_LOG_ERROR << "NULL value returned for key: " << key;
+                LAP_PER_LOG_ERROR << "NULL value returned for key: " << key;
                 return result::FromError( PerErrc::kIntegrityCorrupted );
             }
             
@@ -472,7 +472,7 @@ namespace pm
         }
         else
         {
-            LAP_PM_LOG_ERROR << "Failed to get value for key '" << key << "': " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to get value for key '" << key << "': " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
     }
@@ -498,7 +498,7 @@ namespace pm
         
         if( rc != SQLITE_DONE )
         {
-            LAP_PM_LOG_ERROR << "Failed to set value for key '" << key << "': " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to set value for key '" << key << "': " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
         
@@ -523,7 +523,7 @@ namespace pm
         
         if( rc != SQLITE_DONE )
         {
-            LAP_PM_LOG_ERROR << "Failed to remove key '" << key << "': " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to remove key '" << key << "': " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
         
@@ -548,7 +548,7 @@ namespace pm
         core::Int32 rc = sqlite3_prepare_v2( m_pDB, recoverySQL, -1, &stmt, nullptr );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to prepare recovery statement: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to prepare recovery statement: " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
         
@@ -558,7 +558,7 @@ namespace pm
         
         if( rc != SQLITE_DONE )
         {
-            LAP_PM_LOG_ERROR << "Failed to recovery key '" << key << "': " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to recovery key '" << key << "': " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
         
@@ -583,7 +583,7 @@ namespace pm
         core::Int32 rc = sqlite3_prepare_v2( m_pDB, resetSQL, -1, &stmt, nullptr );
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to prepare reset statement: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to prepare reset statement: " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
         
@@ -593,7 +593,7 @@ namespace pm
         
         if( rc != SQLITE_DONE )
         {
-            LAP_PM_LOG_ERROR << "Failed to reset key '" << key << "': " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to reset key '" << key << "': " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
         
@@ -617,7 +617,7 @@ namespace pm
         
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to remove all keys: " << ( errMsg ? errMsg : "unknown error" );
+            LAP_PER_LOG_ERROR << "Failed to remove all keys: " << ( errMsg ? errMsg : "unknown error" );
             if( errMsg ) sqlite3_free( errMsg );
             return result::FromError( makeErrorCode( rc ) );
         }
@@ -651,7 +651,7 @@ namespace pm
         
         if( rc != SQLITE_OK )
         {
-            LAP_PM_LOG_ERROR << "Failed to sync to storage: " << sqlite3_errmsg( m_pDB );
+            LAP_PER_LOG_ERROR << "Failed to sync to storage: " << sqlite3_errmsg( m_pDB );
             return result::FromError( makeErrorCode( rc ) );
         }
         
@@ -663,7 +663,7 @@ namespace pm
             rc = sqlite3_exec( m_pDB, "DELETE FROM kvs_data WHERE deleted = 1;", nullptr, nullptr, &errMsg );
             if( rc != SQLITE_OK )
             {
-                LAP_PM_LOG_WARN << "Failed to cleanup deleted records: " << ( errMsg ? errMsg : "unknown error" );
+                LAP_PER_LOG_WARN << "Failed to cleanup deleted records: " << ( errMsg ? errMsg : "unknown error" );
                 if( errMsg ) sqlite3_free( errMsg );
             }
         }

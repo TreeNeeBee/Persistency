@@ -8,11 +8,11 @@
 #include <lap/core/CCore.hpp>
 #include "CPersistency.hpp"
 
-::lap::core::SharedHandle< ::lap::pm::FileStorage > testFS;
+::lap::core::SharedHandle< ::lap::per::FileStorage > testFS;
 
 TEST( FileStorage, OpenFileStorage )
 {
-    auto resut = ::lap::pm::OpenFileStorage( ::lap::core::InstanceSpecifier( "test" ), true );
+    auto resut = ::lap::per::OpenFileStorage( ::lap::core::InstanceSpecifier( "test" ), true );
     ASSERT_TRUE( resut.HasValue() );
     testFS = resut.Value();
 
@@ -21,8 +21,8 @@ TEST( FileStorage, OpenFileStorage )
     auto fs1 = testFS->OpenFileWriteOnly( "test_file_w" );
     auto fs2 = testFS->OpenFileWriteOnly( "test_file_append" );
 
-    if ( !fs1.HasValue() ) std::cout << lap::pm::PerErrMessage( static_cast<lap::pm::PerErrc>( fs1.Error().Value() ) ) << std::endl;
-    if ( !fs2.HasValue() ) std::cout << lap::pm::PerErrMessage( static_cast<lap::pm::PerErrc>( fs2.Error().Value() ) ) << std::endl;
+    if ( !fs1.HasValue() ) std::cout << lap::per::PerErrMessage( static_cast<lap::per::PerErrc>( fs1.Error().Value() ) ) << std::endl;
+    if ( !fs2.HasValue() ) std::cout << lap::per::PerErrMessage( static_cast<lap::per::PerErrc>( fs2.Error().Value() ) ) << std::endl;
 
     auto files = testFS->GetAllFileNames();
     EXPECT_TRUE( files.HasValue() );
@@ -62,7 +62,7 @@ TEST( FileStorage, OpenFileReadOnly )
 
 TEST( FileStorage, OpenFileReadWrite )
 {
-    auto resut_rw = testFS->OpenFileReadWrite( "test_file_append", ::lap::pm::OpenMode::kTruncate );
+    auto resut_rw = testFS->OpenFileReadWrite( "test_file_append", ::lap::per::OpenMode::kTruncate );
     EXPECT_TRUE( resut_rw.HasValue() );
     EXPECT_NE( nullptr, resut_rw.Value() );
 
@@ -77,14 +77,14 @@ TEST( FileStorage, OpenFileReadWrite )
 
 TEST( FileStorage, WriteAccessor )
 {
-    auto resut_a1 = testFS->OpenFileWriteOnly( "test_file_append", ::lap::pm::OpenMode::kTruncate );
+    auto resut_a1 = testFS->OpenFileWriteOnly( "test_file_append", ::lap::per::OpenMode::kTruncate );
     EXPECT_TRUE( resut_a1.HasValue() );
     EXPECT_NE( nullptr, resut_a1.Value() );
 
     EXPECT_TRUE( resut_a1.Value()->WriteText( "test_a1" ).HasValue() );
     EXPECT_TRUE( resut_a1.Value()->SyncToFile().HasValue() );
 
-    auto resut_a2 = testFS->OpenFileWriteOnly( "test_file_append", ::lap::pm::OpenMode::kAppend );
+    auto resut_a2 = testFS->OpenFileWriteOnly( "test_file_append", ::lap::per::OpenMode::kAppend );
     EXPECT_TRUE( resut_a2.HasValue() );
 
     EXPECT_TRUE( resut_a2.Value()->WriteText( "resut_a2$#@!%^&*()<>[]{}\"\'.,;:~|\\" ).HasValue() );
@@ -105,7 +105,7 @@ TEST( FileStorage, ReadAccessor )
     EXPECT_EQ( resut_r1.Value()->GetPosition(), 49 );
     EXPECT_FALSE( resut_r1.Value()->ReadText().HasValue() );
 
-    EXPECT_TRUE( resut_r1.Value()->MovePosition( ::lap::pm::Origin::kBeginning, 0 ).HasValue() );
+    EXPECT_TRUE( resut_r1.Value()->MovePosition( ::lap::per::Origin::kBeginning, 0 ).HasValue() );
     EXPECT_FALSE( resut_r1.Value()->IsEof() );
     EXPECT_EQ( resut_r1.Value()->GetPosition(), 0 );
     EXPECT_EQ( resut_r1.Value()->ReadText( 5 ).Value(), "test_" );
@@ -120,14 +120,14 @@ TEST( FileStorage, ReadAccessor )
 
 TEST( FileStorage, ReadWriteAccessor )
 {
-    auto resut_a1 = testFS->OpenFileReadWrite( "test_file_append", ::lap::pm::OpenMode::kTruncate );
+    auto resut_a1 = testFS->OpenFileReadWrite( "test_file_append", ::lap::per::OpenMode::kTruncate );
     EXPECT_TRUE( resut_a1.HasValue() );
     EXPECT_NE( nullptr, resut_a1.Value() );
 
     EXPECT_TRUE( resut_a1.Value()->WriteText( "test_a1" ).HasValue() );
     EXPECT_TRUE( resut_a1.Value()->SyncToFile().HasValue() );
 
-    auto resut_a2 = testFS->OpenFileReadWrite( "test_file_append", ::lap::pm::OpenMode::kAppend );
+    auto resut_a2 = testFS->OpenFileReadWrite( "test_file_append", ::lap::per::OpenMode::kAppend );
     EXPECT_TRUE( resut_a2.HasValue() );
 
     EXPECT_TRUE( resut_a2.Value()->WriteText( "resut_a2$#@!%^&*()<>[]{}\"\'.,;:~|\\" ).HasValue() );

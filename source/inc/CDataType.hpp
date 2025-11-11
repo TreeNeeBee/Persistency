@@ -23,27 +23,27 @@
 
 namespace lap 
 {
-namespace pm 
+namespace per 
 {
-    #define LAP_PM_LOG_CONTEXT_ID       "PM"
-    #define LAP_PM_LOG_CONTEXT_DESC     "PM log ctx"
+    #define LAP_PER_LOG_CONTEXT_ID       "PM"
+    #define LAP_PER_LOG_CONTEXT_DESC     "PM log ctx"
 
     #define LAP_DEBUG
 
 #ifdef LAP_DEBUG
-    #define LAP_PM_LOG                  LAP_LOG( LAP_PM_LOG_CONTEXT_ID, LAP_PM_LOG_CONTEXT_DESC, ::lap::log::LogLevel::kVerbose )
-    #define LAP_PM_LOG_VERBOSE          LAP_PM_LOG.LogVerbose().WithLocation( __FILE__, __LINE__ )
-    #define LAP_PM_LOG_DEBUG            LAP_PM_LOG.LogDebug().WithLocation( __FILE__, __LINE__ )
-    #define LAP_PM_LOG_INFO             LAP_PM_LOG.LogInfo().WithLocation( __FILE__, __LINE__ )
+    #define LAP_PER_LOG                  LAP_LOG( LAP_PER_LOG_CONTEXT_ID, LAP_PER_LOG_CONTEXT_DESC, ::lap::log::LogLevel::kVerbose )
+    #define LAP_PER_LOG_VERBOSE          LAP_PER_LOG.LogVerbose().WithLocation( __FILE__, __LINE__ )
+    #define LAP_PER_LOG_DEBUG            LAP_PER_LOG.LogDebug().WithLocation( __FILE__, __LINE__ )
+    #define LAP_PER_LOG_INFO             LAP_PER_LOG.LogInfo().WithLocation( __FILE__, __LINE__ )
 #else
-    #define LAP_PM_LOG                  LAP_LOG( LAP_PM_LOG_CONTEXT_ID, LAP_PM_LOG_CONTEXT_DESC, ::lap::log::LogLevel::kWarn )
-    #define LAP_PM_LOG_VERBOSE          LAP_PM_LOG.LogOff()
-    #define LAP_PM_LOG_DEBUG            LAP_PM_LOG.LogOff()
-    #define LAP_PM_LOG_INFO             LAP_PM_LOG.LogOff()
+    #define LAP_PER_LOG                  LAP_LOG( LAP_PER_LOG_CONTEXT_ID, LAP_PER_LOG_CONTEXT_DESC, ::lap::log::LogLevel::kWarn )
+    #define LAP_PER_LOG_VERBOSE          LAP_PER_LOG.LogOff()
+    #define LAP_PER_LOG_DEBUG            LAP_PER_LOG.LogOff()
+    #define LAP_PER_LOG_INFO             LAP_PER_LOG.LogOff()
 #endif
-    #define LAP_PM_LOG_WARN             LAP_PM_LOG.LogWarn().WithLocation( __FILE__, __LINE__ )
-    #define LAP_PM_LOG_ERROR            LAP_PM_LOG.LogError().WithLocation( __FILE__, __LINE__ )
-    #define LAP_PM_LOG_FATAL            LAP_PM_LOG.LogFatal().WithLocation( __FILE__, __LINE__ )
+    #define LAP_PER_LOG_WARN             LAP_PER_LOG.LogWarn().WithLocation( __FILE__, __LINE__ )
+    #define LAP_PER_LOG_ERROR            LAP_PER_LOG.LogError().WithLocation( __FILE__, __LINE__ )
+    #define LAP_PER_LOG_FATAL            LAP_PER_LOG.LogFatal().WithLocation( __FILE__, __LINE__ )
 
     enum class OpenMode : core::UInt32
     {

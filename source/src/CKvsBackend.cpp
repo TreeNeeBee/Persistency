@@ -2,7 +2,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     core::Result< core::Vector< core::String > > KvsBackend::GetAllKeys() const noexcept
     {
@@ -90,7 +90,7 @@ namespace pm
     {
         if ( key.size() >= 2 && key[ DEF_KVS_MAGIC_KEY_INDEX ] == DEF_KVS_MAGIC_KEY ) {
 #ifdef LAP_DEBUG
-            LAP_PM_LOG_INFO << "Key is already format";
+            LAP_PER_LOG_INFO << "Key is already format";
 #endif
             return;
         }
@@ -111,5 +111,5 @@ namespace pm
 
         return static_cast<EKvsDataTypeIndicate>( cType - 'a' );
     }
-} // namespace pm
+} // namespace per
 } // namespace log

@@ -20,7 +20,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     class KeyValueStorage;
     class KvsSqliteBackend final : public KvsBackend

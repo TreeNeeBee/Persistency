@@ -8,12 +8,12 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
 namespace util
 {
     class KeyValueStorageBase;
-    class KvsPropertyBackend final : public ::lap::pm::KvsBackend
+    class KvsPropertyBackend final : public ::lap::per::KvsBackend
     {
     public:
         IMP_OPERATOR_NEW(KvsPropertyBackend)

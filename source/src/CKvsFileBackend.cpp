@@ -4,7 +4,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     core::Result< core::Vector< core::String > > KvsFileBackend::GetAllKeys() const noexcept
     {
@@ -41,7 +41,7 @@ namespace pm
         try {
             value = m_kvsRoot.get<KvsDataType>( key.data() );
         } catch ( ::boost::property_tree::ptree_error & e ) {
-            LAP_PM_LOG_WARN.logFormat( "KvsFileBackend::GetValue with key[%s] failed: %s!", key.data(), e.what() );
+            LAP_PER_LOG_WARN.logFormat( "KvsFileBackend::GetValue with key[%s] failed: %s!", key.data(), e.what() );
 
             return result::FromError( PerErrc::kKeyNotFound );
         }
@@ -60,7 +60,7 @@ namespace pm
             // PropertyTree handles Variant serialization automatically
             m_kvsRoot.put( key.data(), value );
         } catch ( ::boost::property_tree::ptree_error & e ) {
-            LAP_PM_LOG_WARN.logFormat( "KvsFileBackend::SetValue with ( %s, %s ) failed: %s!", key.data(), kvsToStrig( value ).c_str(), e.what() );
+            LAP_PER_LOG_WARN.logFormat( "KvsFileBackend::SetValue with ( %s, %s ) failed: %s!", key.data(), kvsToStrig( value ).c_str(), e.what() );
 
             return result::FromError( PerErrc::kIllegalWriteAccess );
         }
@@ -81,7 +81,7 @@ namespace pm
 
     core::Result<void> KvsFileBackend::RecoveryKey( core::StringView ) noexcept
     {
-        LAP_PM_LOG_WARN << "Not support yet";
+        LAP_PER_LOG_WARN << "Not support yet";
         // TODO : KvsFileBackend::RecoveryKey
 
         using result = core::Result<void>;
@@ -90,7 +90,7 @@ namespace pm
 
     core::Result<void> KvsFileBackend::ResetKey( core::StringView ) noexcept
     {
-        LAP_PM_LOG_WARN << "Not support yet";
+        LAP_PER_LOG_WARN << "Not support yet";
         // TODO : KvsFileBackend::ResetKey
 
         using result = core::Result<void>;
@@ -135,16 +135,16 @@ namespace pm
 
                 ifs.close();
             } else {
-                LAP_PM_LOG_WARN << "KvsFileBackend::parseFromFile open failed";
+                LAP_PER_LOG_WARN << "KvsFileBackend::parseFromFile open failed";
 
                 return result::FromError( PerErrc::kFileNotFound );
             }
         } catch ( const std::ios_base::failure& e ) {
-            LAP_PM_LOG_WARN.logFormat( "KvsFileBackend::parseFromFile %s failed with exception: %s!!!", strFile.data(), e.what() );
+            LAP_PER_LOG_WARN.logFormat( "KvsFileBackend::parseFromFile %s failed with exception: %s!!!", strFile.data(), e.what() );
 
             return result::FromError( PerErrc::kFileNotFound );
         } catch ( ::boost::property_tree::ptree_error& e) {
-            LAP_PM_LOG_WARN.logFormat( "KvsFileBackend::parseFromFile read_json %s failed with exception: %s!!!", strFile.data(), e.what() );
+            LAP_PER_LOG_WARN.logFormat( "KvsFileBackend::parseFromFile read_json %s failed with exception: %s!!!", strFile.data(), e.what() );
 
             return result::FromError( PerErrc::kFileNotFound );
         }
@@ -185,11 +185,11 @@ namespace pm
 
                 return result::FromValue();
             } else {
-                LAP_PM_LOG_WARN << "KvsFileBackend::saveToFile failed!!! " << strFile.data();
+                LAP_PER_LOG_WARN << "KvsFileBackend::saveToFile failed!!! " << strFile.data();
                 return result::FromError( PerErrc::kFileNotFound );
             }
         } catch ( const std::ios_base::failure& e ) {
-            LAP_PM_LOG_WARN.logFormat( "KvsFileBackend::saveToFile %s failed with exception: %s!!!", strFile.data(), e.what() );
+            LAP_PER_LOG_WARN.logFormat( "KvsFileBackend::saveToFile %s failed with exception: %s!!!", strFile.data(), e.what() );
 
             return result::FromError( PerErrc::kFileNotFound );
         }

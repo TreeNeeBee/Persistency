@@ -9,11 +9,11 @@
 #include <lap/core/CCore.hpp>
 #include "CPersistency.hpp"
 
-::lap::core::SharedHandle< ::lap::pm::KeyValueStorage > testKVS;
+::lap::core::SharedHandle< ::lap::per::KeyValueStorage > testKVS;
 
 TEST( KeyValueStorage, OpenKeyValueStorage )
 {
-    auto resut = ::lap::pm::OpenKeyValueStorage( ::lap::core::InstanceSpecifier( "/tmp/test" ) );
+    auto resut = ::lap::per::OpenKeyValueStorage( ::lap::core::InstanceSpecifier( "/tmp/test" ) );
     ASSERT_TRUE( resut.HasValue() );
 
     testKVS = resut.Value();
@@ -95,14 +95,14 @@ TEST( KeyValueStorage, GetValue )
     EXPECT_EQ( testKVS->GetValue< ::lap::core::String >( "string" ).Value(), ::lap::core::String( "demo" ) );
 }
 
-::lap::core::SharedHandle< ::lap::pm::KeyValueStorage > testRemoteKVS;
+::lap::core::SharedHandle< ::lap::per::KeyValueStorage > testRemoteKVS;
 
 TEST( KeyValueStorage, OpenKeyValueStorageRemote )
 {
 #ifdef LAP_DEBUG
-    auto resut = ::lap::pm::OpenKeyValueStorage( ::lap::core::InstanceSpecifier( "global" ), true, ::lap::pm::KvsBackendType::kvsFile );
+    auto resut = ::lap::per::OpenKeyValueStorage( ::lap::core::InstanceSpecifier( "global" ), true, ::lap::per::KvsBackendType::kvsFile );
 #else
-    auto resut = ::lap::pm::OpenKeyValueStorage( ::lap::core::InstanceSpecifier( "global" ) );
+    auto resut = ::lap::per::OpenKeyValueStorage( ::lap::core::InstanceSpecifier( "global" ) );
 #endif
     ASSERT_TRUE( resut.HasValue() );
 

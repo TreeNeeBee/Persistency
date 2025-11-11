@@ -3,7 +3,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     ReadAccessor::ReadAccessor ( core::StringView strFilePath, OpenMode mode, FileStorage* parent )
         : m_strFile( strFilePath )
@@ -22,10 +22,10 @@ namespace pm
 
             m_fpStream->open( strFilePath.data(), convert( mode ) );
 #ifdef LAP_DEBUG
-            LAP_PM_LOG_DEBUG.logFormat( "ReadAccessor open with %s, mode: 0x0x%x", m_strFile.data(), static_cast< core::Int32 >( m_openMode ) );
+            LAP_PER_LOG_DEBUG.logFormat( "ReadAccessor open with %s, mode: 0x0x%x", m_strFile.data(), static_cast< core::Int32 >( m_openMode ) );
 #endif
         } catch ( const ::std::ios_base::failure& fail ) {
-            LAP_PM_LOG_ERROR << "ReadAccessor open failed " << fail.what();
+            LAP_PER_LOG_ERROR << "ReadAccessor open failed " << fail.what();
 
             m_fpStream = nullptr;
 
@@ -261,7 +261,7 @@ namespace pm
         seek( position );
 
         if ( m_fpStream->fail() ) {
-            LAP_PM_LOG_WARN << "ReadAccessorBase::SetPosition seek failed";
+            LAP_PER_LOG_WARN << "ReadAccessorBase::SetPosition seek failed";
 
             seek( pos );
             return result::FromError( PerErrc::kInvalidPosition );
@@ -281,7 +281,7 @@ namespace pm
         seek( offset, convert( origin ) );
 
         if ( m_fpStream->fail() ) {
-            LAP_PM_LOG_WARN << "ReadAccessorBase::MovePosition seek failed";
+            LAP_PER_LOG_WARN << "ReadAccessorBase::MovePosition seek failed";
             seek( pos );
 
             return result::FromError( PerErrc::kInvalidPosition );

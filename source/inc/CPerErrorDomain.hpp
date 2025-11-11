@@ -21,7 +21,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     enum class PerErrc : core::ErrorDomain::CodeType 
     {
@@ -35,6 +35,7 @@ namespace pm
         kDataTypeMismatch           = 8,
         kInitValueNotAvailable      = 9,
         kResourceBusy               = 10,
+        kOutOfMemorySpace           = 11,     // NEW: AUTOSAR R22-11+
         kOutOfStorageSpace          = 12,
         kFileNotFound               = 13,
         kNotInitialized             = 14,
@@ -43,7 +44,10 @@ namespace pm
         kInvalidOpenMode            = 17,
         kInvalidSize                = 18,
         KPermissionDenied           = 19,
-        kUnsupported                = 20
+        kUnsupported                = 20,
+        kWrongDataType              = 21,     // NEW: AUTOSAR type validation
+        kWrongDataSize              = 22,     // NEW: AUTOSAR size validation
+        kInvalidKey                 = 23      // NEW: AUTOSAR key validation
     };
 
     inline constexpr const core::Char* PerErrMessage( PerErrc errCode )
@@ -71,6 +75,8 @@ namespace pm
             return "The operation could not be performed because no initial value is available.";
         case PerErrc::kResourceBusy:
             return "UpdatePersistency or ResetPersistency is currently being executed, or if RecoverKeyValue Storage or ResetKeyValueStorage is currently being executed for the same Key-Value Storage.";
+        case PerErrc::kOutOfMemorySpace:
+            return "The available memory space is insufficient for the operation.";
         case PerErrc::kOutOfStorageSpace:
             return "The available storage space is insufficient for the added/updated values.";
         case PerErrc::kFileNotFound:
@@ -89,6 +95,12 @@ namespace pm
             return std::strerror( EACCES );
         case PerErrc::kUnsupported:
             return "Not support yet.";
+        case PerErrc::kWrongDataType:
+            return "The data type provided does not match the expected type.";
+        case PerErrc::kWrongDataSize:
+            return "The data size provided does not match the expected size.";
+        case PerErrc::kInvalidKey:
+            return "The provided key is invalid or malformed.";
         default:
             return "Unknown error";
         }

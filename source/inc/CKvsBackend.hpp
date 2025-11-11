@@ -18,7 +18,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     #define DEF_KVS_MAGIC_KEY           '^'
     #define DEF_KVS_MAGIC_KEY_INDEX     0
@@ -70,7 +70,7 @@ namespace pm
         KvsBackend& operator=( KvsBackend&& ) & noexcept = delete;
         KvsBackend& operator=( KvsBackend const& ) = delete;
     };
-} // namespace pm
+} // namespace per
 } // namespace lap
 
 #endif

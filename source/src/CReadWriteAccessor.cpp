@@ -2,7 +2,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     ReadWriteAccessor::ReadWriteAccessor ( core::StringView strFile, OpenMode mode, FileStorage* parent )
         : ReadAccessor( strFile, mode, parent )
@@ -96,7 +96,7 @@ namespace pm
     ReadWriteAccessor& ReadWriteAccessor::operator<< ( core::StringView s ) noexcept
     {
         if ( !checkWrite() || checkBinary() )  {
-            LAP_PM_LOG_WARN << "ReadWriteAccessorBase::operator<< kInvalidOpenMode " << s.data();
+            LAP_PER_LOG_WARN << "ReadWriteAccessorBase::operator<< kInvalidOpenMode " << s.data();
 
             return *this;
         }

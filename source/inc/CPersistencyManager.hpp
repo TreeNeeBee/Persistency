@@ -19,7 +19,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     class FileStorage;
     class KeyValueStorage;
@@ -32,7 +32,7 @@ namespace pm
         using _FileStorageMap   = core::UnorderedMap< core::String, core::SharedHandle< FileStorage > >;
         using _KvsMap           = core::UnorderedMap< core::String, core::SharedHandle< KeyValueStorage > >;
 
-        #define DEF_PM_CONFIG_INDICATE     "pmConfig"
+        #define DEF_PER_CONFIG_INDICATE     "perConfig"
 
     public:
         static CPersistencyManager& getInstance() noexcept
@@ -80,6 +80,6 @@ namespace pm
         core::Mutex                             m_mtxKvsMap;
         _KvsMap                                 m_kvsMap;
     };
-} // namespace pm
+} // namespace per
 } // namespace lap
 #endif

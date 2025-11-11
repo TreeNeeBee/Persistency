@@ -7,7 +7,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     KeyValueStorage::KeyValueStorage ( core::StringView strIdentifier ) noexcept
         : m_strPath( strIdentifier )
@@ -25,13 +25,13 @@ namespace pm
             } else if ( type & KvsBackendType::kvsSqlite ) {
                 m_pKvsBackend = ::std::make_unique< KvsSqliteBackend >( strIdentifier );
             } else if ( type & KvsBackendType::kvsProperty ) {
-                m_pKvsBackend = ::std::make_unique< ::lap::pm::util::KvsPropertyBackend >( strIdentifier );
+                m_pKvsBackend = ::std::make_unique< ::lap::per::util::KvsPropertyBackend >( strIdentifier );
             } else {
-                LAP_PM_LOG_ERROR << "Kvs backend type is not recognized, default to FileBackend";
+                LAP_PER_LOG_ERROR << "Kvs backend type is not recognized, default to FileBackend";
                 m_pKvsBackend = ::std::make_unique< KvsFileBackend >( strIdentifier );
             }
         } catch( const PerException& e ) {
-            LAP_PM_LOG_ERROR << "Kvs backend create failed " << e.what();
+            LAP_PER_LOG_ERROR << "Kvs backend create failed " << e.what();
         }
     }
 
@@ -234,5 +234,5 @@ namespace pm
     {
         return CPersistencyManager::getInstance().GetCurrentKeyValueStorageSize( kvs );
     }
-} // namespace pm
+} // namespace per
 } // namespace lap

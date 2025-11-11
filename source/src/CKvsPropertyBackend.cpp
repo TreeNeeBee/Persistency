@@ -16,7 +16,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
 namespace util
 {
@@ -199,7 +199,7 @@ namespace util
                 value.emplace_back( it->first.c_str() );  // Direct return, no +2 offset
             }
         } catch( const std::exception& e ) {
-            LAP_PM_LOG_ERROR << "Exception in KvsPropertyBackend::GetAllKeys: " << core::StringView(e.what());
+            LAP_PER_LOG_ERROR << "Exception in KvsPropertyBackend::GetAllKeys: " << core::StringView(e.what());
             return result::FromError( PerErrc::kNotInitialized );
         }
 
@@ -217,7 +217,7 @@ namespace util
                 return result::FromValue( true );
             }
         } catch(const std::exception& e) {
-            LAP_PM_LOG_ERROR << "Exception in KvsPropertyBackend::KeyExists: " << core::StringView(e.what());
+            LAP_PER_LOG_ERROR << "Exception in KvsPropertyBackend::KeyExists: " << core::StringView(e.what());
             return result::FromError( PerErrc::kNotInitialized );
         }
 
@@ -239,7 +239,7 @@ namespace util
             // Decode value (type is stored in value itself)
             return result::FromValue( shm::decodeValue( it->second ) );
         } catch(const std::exception& e) {
-            LAP_PM_LOG_ERROR << "Exception in KvsPropertyBackend::GetValue: " << core::StringView(e.what());
+            LAP_PER_LOG_ERROR << "Exception in KvsPropertyBackend::GetValue: " << core::StringView(e.what());
             return result::FromError( PerErrc::kNotInitialized );
         }
     }
@@ -257,12 +257,12 @@ namespace util
             shm::context.mapValue->operator[]( shmKey ) = shmValue;
 
 #ifdef LAP_DEBUG
-            LAP_PM_LOG_DEBUG.logFormat( "KvsPropertyBackend::SetValue with( %s , [type:%c] )", 
+            LAP_PER_LOG_DEBUG.logFormat( "KvsPropertyBackend::SetValue with( %s , [type:%c] )", 
                                        key.data(), static_cast<char>('a' + ::lap::core::GetVariantIndex( value )) );
 #endif
             
         } catch(const std::exception& e) {
-            LAP_PM_LOG_ERROR << "Exception in KvsPropertyBackend::SetValue: " << core::StringView(e.what());
+            LAP_PER_LOG_ERROR << "Exception in KvsPropertyBackend::SetValue: " << core::StringView(e.what());
             return result::FromError( PerErrc::kNotInitialized );
         }
         return result::FromValue();
@@ -280,7 +280,7 @@ namespace util
             }
            
         } catch(const std::exception& e) {
-            LAP_PM_LOG_ERROR << "Exception in KvsPropertyBackend::DeleteKey: " << core::StringView(e.what());
+            LAP_PER_LOG_ERROR << "Exception in KvsPropertyBackend::DeleteKey: " << core::StringView(e.what());
             return result::FromError( PerErrc::kNotInitialized );
         }
 
@@ -289,13 +289,13 @@ namespace util
 
     core::Result<void> KvsPropertyBackend::RecoveryKey( core::StringView ) noexcept
     {
-        LAP_PM_LOG_WARN << "RecoveryKey not supported";
+        LAP_PER_LOG_WARN << "RecoveryKey not supported";
         return core::Result<void>::FromError( PerErrc::kUnsupported );
     }
 
     core::Result<void> KvsPropertyBackend::ResetKey( core::StringView ) noexcept
     {
-        LAP_PM_LOG_WARN << "ResetKey not supported";
+        LAP_PER_LOG_WARN << "ResetKey not supported";
         return core::Result<void>::FromError( PerErrc::kUnsupported );
     }
 
@@ -325,7 +325,7 @@ namespace util
             shm::context.mapValue = shm::context.segment.find_or_construct< shm::SHM_MapValue >( m_strFile.c_str() )( shm::context.segment.get_segment_manager() );
 
             if ( nullptr == shm::context.mapValue ) {
-                LAP_PM_LOG_ERROR << "KvsPropertyBackend::DiscardPendingChanges shm find_or_construct failed!!";
+                LAP_PER_LOG_ERROR << "KvsPropertyBackend::DiscardPendingChanges shm find_or_construct failed!!";
 
                 return result::FromError( PerErrc::kNotInitialized );
             }
@@ -350,7 +350,7 @@ namespace util
             );
             
             if ( !shm::context.segment.check_sanity() ) {
-                LAP_PM_LOG_ERROR << "KvsPropertyBackend: shared memory sanity check failed";
+                LAP_PER_LOG_ERROR << "KvsPropertyBackend: shared memory sanity check failed";
                 throw PerException( PerErrc::kInitValueNotAvailable );
             }
             
@@ -360,13 +360,13 @@ namespace util
             )( shm::context.segment.get_segment_manager() );
 
             if ( nullptr == shm::context.mapValue ) {
-                LAP_PM_LOG_ERROR << "KvsPropertyBackend: failed to find/create shared memory map";
+                LAP_PER_LOG_ERROR << "KvsPropertyBackend: failed to find/create shared memory map";
                 throw PerException( PerErrc::kInitValueNotAvailable );
             }
             
-            LAP_PM_LOG_INFO << "KvsPropertyBackend initialized with SHM name: " << core::StringView(shm::context.shmName);
+            LAP_PER_LOG_INFO << "KvsPropertyBackend initialized with SHM name: " << core::StringView(shm::context.shmName);
         } catch ( std::exception &e ) {
-            LAP_PM_LOG_ERROR << "KvsPropertyBackend initialization failed: " << e.what();
+            LAP_PER_LOG_ERROR << "KvsPropertyBackend initialization failed: " << e.what();
             throw PerException( PerErrc::kInitValueNotAvailable );
         }
 

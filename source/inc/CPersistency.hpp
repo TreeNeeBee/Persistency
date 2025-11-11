@@ -7,19 +7,19 @@
  * 
  * 
  */
-#ifndef LAP_PERSISTENCY_PERSISTENCYCLIENT_HPP
-#define LAP_PERSISTENCY_PERSISTENCYCLIENT_HPP
+#ifndef LAP_PERSISTENCY_PERSISTENCY_HPP
+#define LAP_PERSISTENCY_PERSISTENCY_HPP
 
 #include <lap/core/CCore.hpp>
 #include <lap/log/CLog.hpp>
 
 #define LAP_DEBUG
 
-// pm common
+// per common
 #include "CDataType.hpp"
 #include "CPerErrorDomain.hpp"
 
-// pm client
+// per client
 // file operator
 #include "CReadAccessor.hpp"
 #include "CReadWriteAccessor.hpp"

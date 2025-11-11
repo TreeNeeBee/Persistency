@@ -16,7 +16,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     class KvsBackend;
     class KeyValueStorage final
@@ -96,7 +96,7 @@ namespace pm
     core::Result< void >                                                RecoverKeyValueStorage( const core::InstanceSpecifier & ) noexcept;
     core::Result< void >                                                ResetKeyValueStorage( const core::InstanceSpecifier & ) noexcept;
     core::Result< core::UInt64 >                                        GetCurrentKeyValueStorageSize( const core::InstanceSpecifier & ) noexcept;
-} // namespace pm
+} // namespace per
 } // namespace lap
 
 #endif

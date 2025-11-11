@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 #include "CPerErrorDomain.hpp"
 
-using namespace lap::pm;
+using namespace lap::per;
 using namespace lap::core;
 
 class ErrorDomainTest : public ::testing::Test {

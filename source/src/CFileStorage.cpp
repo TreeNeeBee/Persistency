@@ -10,7 +10,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     FileStorage::FileStorage ( core::StringView strIdentifier ) noexcept
         : m_strPath( strIdentifier )
@@ -46,7 +46,7 @@ namespace pm
                     !core::Path::isDirectory( strBackUpPath ) || 
                     !core::Path::isDirectory( strInitialPath ) ||
                     !core::Path::isFile( strFileInfo ) ) ) {
-            LAP_PM_LOG_ERROR << "FileStorage::initialize failed!!: " << m_strPath.data();
+            LAP_PER_LOG_ERROR << "FileStorage::initialize failed!!: " << m_strPath.data();
             return result::FromError( PerErrc::kPhysicalStorageFailure );
         }
 
@@ -54,7 +54,7 @@ namespace pm
         //         !core::Path::createDirectory( strBackUpPath ) || 
         //         !core::Path::createDirectory( strInitialPath ) ||
         //         !core::Path::createDirectory( strInitialPath ) ) {
-        //     LAP_PM_LOG_ERROR << "FileStorage::initialize with createFolder failed!!: " << m_strPath.data();
+        //     LAP_PER_LOG_ERROR << "FileStorage::initialize with createFolder failed!!: " << m_strPath.data();
         //     return result::FromError( PerErrc::kPhysicalStorageFailure );
         // }
 
@@ -226,7 +226,7 @@ namespace pm
 
             try {
                 return result::FromValue( ::std::make_unique< ReadWriteAccessor >( fileName, mode, this ) );
-            } catch ( const ::lap::pm::PerException& e ) {
+            } catch ( const ::lap::per::PerException& e ) {
                 return result::FromError( e.Error() );
             }
         } else {
@@ -249,7 +249,7 @@ namespace pm
 
             try {
                 return result::FromValue( ::std::make_unique< ReadWriteAccessor >( fileName, mode, this ) );
-            } catch ( const ::lap::pm::PerException& e ) {
+            } catch ( const ::lap::per::PerException& e ) {
                 return result::FromError( e.Error() );
             }
         }
@@ -291,7 +291,7 @@ namespace pm
 
             try {
                 return result::FromValue( ::std::make_unique< ReadAccessor >( fileName, mode, this ) );
-            } catch ( const ::lap::pm::PerException& e ) {
+            } catch ( const ::lap::per::PerException& e ) {
                 return result::FromError( e.Error() );
             }
         } else {
@@ -314,7 +314,7 @@ namespace pm
 
             try {
                 return result::FromValue( ::std::make_unique< ReadAccessor >( fileName, mode, this ) );
-            } catch ( const ::lap::pm::PerException& e ) {
+            } catch ( const ::lap::per::PerException& e ) {
                 return result::FromError( e.Error() );
             }
         }
@@ -356,7 +356,7 @@ namespace pm
 
             try {
                 return result::FromValue( ::std::make_unique< ReadWriteAccessor >( fileName, mode, this ) );
-            } catch ( const ::lap::pm::PerException& e ) {
+            } catch ( const ::lap::per::PerException& e ) {
                 return result::FromError( e.Error() );
             }
         } else {
@@ -379,7 +379,7 @@ namespace pm
 
             try {
                 return result::FromValue( ::std::make_unique< ReadWriteAccessor >( fileName, mode, this ) );
-            } catch ( const ::lap::pm::PerException& e ) {
+            } catch ( const ::lap::per::PerException& e ) {
                 return result::FromError( e.Error() );
             }
         }

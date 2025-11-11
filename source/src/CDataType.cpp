@@ -2,7 +2,7 @@
 
 namespace lap 
 {
-namespace pm 
+namespace per 
 {
     OpenMode& operator|= ( OpenMode &left, const OpenMode &right )
     {

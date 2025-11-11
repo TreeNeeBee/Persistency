@@ -22,8 +22,8 @@
 #include "CKvsPropertyBackend.hpp"
 #include "CDataType.hpp"
 
-using namespace lap::pm;
-using namespace lap::pm::util;
+using namespace lap::per;
+using namespace lap::per::util;
 using namespace lap::core;
 
 class PropertyBackendTest : public ::testing::Test {

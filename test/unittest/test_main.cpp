@@ -17,7 +17,7 @@ int main(int argc, char **argv)
     ::lap::log::LogManager::getInstance().initialize();
     
     // Initialize persistency manager
-    ::lap::pm::CPersistencyManager::getInstance().initialize();
+    ::lap::per::CPersistencyManager::getInstance().initialize();
     
     // Initialize Google Test
     ::testing::InitGoogleTest(&argc, argv);

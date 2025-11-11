@@ -15,7 +15,7 @@
 
 namespace lap
 {
-namespace pm
+namespace per
 {
     class ReadWriteAccessor : public ReadAccessor
     {
