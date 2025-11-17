@@ -47,7 +47,7 @@ namespace per
         return result::FromError( PerErrc::kNotInitialized );
     }
 
-    core::Result<void> KvsBackend::RecoveryKey( core::StringView ) noexcept
+    core::Result<void> KvsBackend::RecoverKey( core::StringView ) noexcept
     {
         //UNUSED( key );
 

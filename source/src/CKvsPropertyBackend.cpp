@@ -11,8 +11,10 @@
 #include <unistd.h>  // for getpid()
 #include <cctype>    // for std::isalnum()
 
-#include "CKvsBackend.hpp"
+#include "IKvsBackend.hpp"
 #include "CKvsPropertyBackend.hpp"
+#include "CKvsFileBackend.hpp"
+#include "CKvsSqliteBackend.hpp"
 
 namespace lap
 {
@@ -23,8 +25,6 @@ namespace util
     namespace shm
     {
         namespace bip = ::boost::interprocess;
-        
-        constexpr static auto DEF_SHM_MAX_SIZE = 1ul << 20; // 1M
 
         using SHM_Segment = bip::managed_shared_memory;
         using SHM_Manager = SHM_Segment::segment_manager;
@@ -51,7 +51,7 @@ namespace util
 
         struct SHMContext
         {
-            core::Size                          size{ DEF_SHM_MAX_SIZE };
+            core::Size                          size{ 0 };  // Set by constructor
             core::String                        shmName;  // Generated from strFile
             SHM_Segment                         segment;
             SHM_MapValue*                       mapValue{ nullptr };
@@ -255,6 +255,8 @@ namespace util
             auto&& shmKey = shm::SHM_String( key.data(), shm::context.segment.get_segment_manager() );
             auto&& shmValue = shm::encodeValue( value );  // Encode type into value
             shm::context.mapValue->operator[]( shmKey ) = shmValue;
+            
+            m_bDirty = true;  // Mark as dirty for sync
 
 #ifdef LAP_DEBUG
             LAP_PER_LOG_DEBUG.logFormat( "KvsPropertyBackend::SetValue with( %s , [type:%c] )", 
@@ -277,6 +279,7 @@ namespace util
 
             if ( it != shm::context.mapValue->end() ) {
                 shm::context.mapValue->erase( it );
+                m_bDirty = true;  // Mark as dirty for sync
             }
            
         } catch(const std::exception& e) {
@@ -287,15 +290,23 @@ namespace util
         return result::FromValue();
     }
 
-    core::Result<void> KvsPropertyBackend::RecoveryKey( core::StringView ) noexcept
+    core::Result<void> KvsPropertyBackend::RecoverKey( core::StringView ) noexcept
     {
-        LAP_PER_LOG_WARN << "RecoveryKey not supported";
+        // Delegate to persistence backend if available
+        if (m_pPersistenceBackend && m_pPersistenceBackend->available()) {
+            return m_pPersistenceBackend->RecoverKey("");
+        }
+        LAP_PER_LOG_WARN << "RecoverKey not supported without persistence backend";
         return core::Result<void>::FromError( PerErrc::kUnsupported );
     }
 
     core::Result<void> KvsPropertyBackend::ResetKey( core::StringView ) noexcept
     {
-        LAP_PER_LOG_WARN << "ResetKey not supported";
+        // Delegate to persistence backend if available
+        if (m_pPersistenceBackend && m_pPersistenceBackend->available()) {
+            return m_pPersistenceBackend->ResetKey("");
+        }
+        LAP_PER_LOG_WARN << "ResetKey not supported without persistence backend";
         return core::Result<void>::FromError( PerErrc::kUnsupported );
     }
 
@@ -304,6 +315,7 @@ namespace util
         using result = core::Result<void>;
         try {
             shm::context.mapValue->clear();
+            m_bDirty = true;  // Mark as dirty for sync
         } catch(const std::exception& e) {
             return result::FromError( PerErrc::kNotInitialized );
         }
@@ -313,22 +325,33 @@ namespace util
 
     core::Result<void> KvsPropertyBackend::SyncToStorage() noexcept
     {
-        // Shared memory is automatically synced, no action needed
+        // Save shared memory data to persistence backend
+        if (m_bDirty && m_pPersistenceBackend && m_pPersistenceBackend->available()) {
+            auto result = saveToPersistence();
+            if (result.HasValue()) {
+                m_bDirty = false;
+            }
+            return result;
+        }
         return core::Result<void>::FromValue();
     }
 
     core::Result<void> KvsPropertyBackend::DiscardPendingChanges() noexcept
     {
         using result = core::Result<void>;
+        
+        // Clear shared memory and reload from persistence
         try {
-            // reopen mapValue
-            shm::context.mapValue = shm::context.segment.find_or_construct< shm::SHM_MapValue >( m_strFile.c_str() )( shm::context.segment.get_segment_manager() );
-
-            if ( nullptr == shm::context.mapValue ) {
-                LAP_PER_LOG_ERROR << "KvsPropertyBackend::DiscardPendingChanges shm find_or_construct failed!!";
-
-                return result::FromError( PerErrc::kNotInitialized );
+            shm::context.mapValue->clear();
+            
+            if (m_pPersistenceBackend && m_pPersistenceBackend->available()) {
+                auto loadResult = loadFromPersistence();
+                if (!loadResult.HasValue()) {
+                    return loadResult;
+                }
             }
+            
+            m_bDirty = false;
         } catch(const std::exception& e) {
             return result::FromError( PerErrc::kNotInitialized );
         }
@@ -336,13 +359,176 @@ namespace util
         return result::FromValue();
     }
 
-    KvsPropertyBackend::KvsPropertyBackend( core::StringView strFile )
+    core::Result<core::UInt64> KvsPropertyBackend::GetSize() const noexcept
     {
+        using result = core::Result<core::UInt64>;
+        
+        // Delegate to persistence backend if available
+        if (m_pPersistenceBackend && m_pPersistenceBackend->available()) {
+            return m_pPersistenceBackend->GetSize();
+        }
+        
+        // Estimate shared memory size if no persistence backend
         try {
-            // Generate shared memory name from strFile parameter
-            shm::context.shmName = shm::generateShmName(strFile);
+            core::UInt64 estimatedSize = shm::context.mapValue->size() * 64;  // Rough estimate
+            return result::FromValue(estimatedSize);
+        } catch(const std::exception& e) {
+            return result::FromError(PerErrc::kNotInitialized);
+        }
+    }
+    
+    core::Result<core::UInt32> KvsPropertyBackend::GetKeyCount() const noexcept
+    {
+        using result = core::Result<core::UInt32>;
+        
+        try {
+            return result::FromValue(static_cast<core::UInt32>(shm::context.mapValue->size()));
+        } catch(const std::exception& e) {
+            return result::FromError(PerErrc::kNotInitialized);
+        }
+    }
+
+    // ==================== Load/Save to Persistence Backend ====================
+    
+    core::Result<void> KvsPropertyBackend::loadFromPersistence() noexcept
+    {
+        using result = core::Result<void>;
+        
+        if (!m_pPersistenceBackend || !m_pPersistenceBackend->available()) {
+            LAP_PER_LOG_WARN << "No persistence backend available for loading";
+            return result::FromValue();  // Not an error, just no data to load
+        }
+        
+        try {
+            // Get all keys from persistence backend
+            auto keysResult = m_pPersistenceBackend->GetAllKeys();
+            if (!keysResult.HasValue()) {
+                LAP_PER_LOG_WARN << "Failed to get keys from persistence backend";
+                return result::FromValue();  // Empty backend is OK
+            }
             
-            // Initialize shared memory with open_or_create
+            const auto& keys = keysResult.Value();
+            LAP_PER_LOG_INFO << "Loading " << keys.size() << " keys from persistence backend";
+            
+            // Load each key-value pair into shared memory
+            for (const auto& key : keys) {
+                auto valueResult = m_pPersistenceBackend->GetValue(key);
+                if (valueResult.HasValue()) {
+                    auto shmKey = shm::SHM_String(key.c_str(), shm::context.segment.get_segment_manager());
+                    auto shmValue = shm::encodeValue(valueResult.Value());
+                    shm::context.mapValue->operator[](shmKey) = shmValue;
+                }
+            }
+            
+            LAP_PER_LOG_INFO << "Successfully loaded data from persistence backend";
+        } catch(const std::exception& e) {
+            LAP_PER_LOG_ERROR << "Exception during load from persistence: " << e.what();
+            return result::FromError(PerErrc::kPhysicalStorageFailure);
+        }
+        
+        return result::FromValue();
+    }
+    
+    core::Result<void> KvsPropertyBackend::saveToPersistence() noexcept
+    {
+        using result = core::Result<void>;
+        
+        if (!m_pPersistenceBackend || !m_pPersistenceBackend->available()) {
+            LAP_PER_LOG_DEBUG << "No persistence backend available for saving (memory-only mode)";
+            return result::FromValue();  // Success for kvsNone mode
+        }
+        
+        try {
+            LAP_PER_LOG_INFO << "Saving " << shm::context.mapValue->size() << " keys to persistence backend";
+            
+            // Clear persistence backend first (full sync)
+            auto clearResult = m_pPersistenceBackend->RemoveAllKeys();
+            if (!clearResult.HasValue()) {
+                LAP_PER_LOG_ERROR << "Failed to clear persistence backend before sync";
+                return clearResult;
+            }
+            
+            // Save all key-value pairs from shared memory to persistence
+            for (const auto& pair : *shm::context.mapValue) {
+                core::String key(pair.first.c_str());
+                KvsDataType value = shm::decodeValue(pair.second);
+                
+                auto setResult = m_pPersistenceBackend->SetValue(key, value);
+                if (!setResult.HasValue()) {
+                    LAP_PER_LOG_ERROR << "Failed to set key '" << key << "' in persistence backend";
+                    return setResult;
+                }
+            }
+            
+            // Sync persistence backend to disk
+            auto syncResult = m_pPersistenceBackend->SyncToStorage();
+            if (!syncResult.HasValue()) {
+                LAP_PER_LOG_ERROR << "Failed to sync persistence backend to storage";
+                return syncResult;
+            }
+            
+            LAP_PER_LOG_INFO << "Successfully saved data to persistence backend";
+        } catch(const std::exception& e) {
+            LAP_PER_LOG_ERROR << "Exception during save to persistence: " << e.what();
+            return result::FromError(PerErrc::kPhysicalStorageFailure);
+        }
+        
+        return result::FromValue();
+    }
+
+    // ==================== Constructor/Destructor ====================
+    
+    KvsPropertyBackend::KvsPropertyBackend( core::StringView identifier, 
+                                             KvsBackendType persistenceBackend,
+                                             core::Size shmSize,
+                                             const PersistencyConfig* config )
+        : m_strIdentifier(identifier)
+        , m_shmSize(shmSize)
+        , m_persistenceBackend(persistenceBackend)
+    {
+        // Override with config if provided
+        if (config != nullptr) {
+            // Use configured shared memory size
+            if (config->kvs.propertyBackendShmSize > 0) {
+                m_shmSize = config->kvs.propertyBackendShmSize;
+                LAP_PER_LOG_INFO << "Using configured shared memory size: " 
+                                 << (m_shmSize / 1024) << " KB";
+            }
+            
+            // Use configured persistence backend type
+            if (!config->kvs.propertyBackendPersistence.empty()) {
+                if (config->kvs.propertyBackendPersistence == "sqlite") {
+                    m_persistenceBackend = KvsBackendType::kvsSqlite;
+                } else {
+                    m_persistenceBackend = KvsBackendType::kvsFile;
+                }
+                LAP_PER_LOG_INFO << "Using configured persistence backend: " 
+                                 << config->kvs.propertyBackendPersistence;
+            }
+        }
+        
+        // Set shared memory size in context
+        shm::context.size = m_shmSize;
+        try {
+            // 1. Create persistence backend (File, SQLite, or None)
+            if (m_persistenceBackend == KvsBackendType::kvsFile) {
+                m_pPersistenceBackend = ::std::make_unique<KvsFileBackend>(identifier);
+                LAP_PER_LOG_INFO << "Property backend using File backend for persistence";
+            } else if (m_persistenceBackend == KvsBackendType::kvsSqlite) {
+                m_pPersistenceBackend = ::std::make_unique<KvsSqliteBackend>(identifier);
+                LAP_PER_LOG_INFO << "Property backend using SQLite backend for persistence";
+            } else if (m_persistenceBackend == KvsBackendType::kvsNone) {
+                m_pPersistenceBackend = nullptr;
+                LAP_PER_LOG_INFO << "Property backend in memory-only mode (no persistence)";
+            } else {
+                LAP_PER_LOG_ERROR << "Invalid persistence backend type";
+                throw PerException(PerErrc::kInitValueNotAvailable);
+            }
+            
+            // 2. Generate shared memory name from identifier
+            shm::context.shmName = shm::generateShmName(identifier);
+            
+            // 3. Initialize shared memory with open_or_create
             shm::context.segment = shm::SHM_Segment( 
                 shm::bip::open_or_create, 
                 shm::context.shmName.c_str(), 
@@ -354,9 +540,9 @@ namespace util
                 throw PerException( PerErrc::kInitValueNotAvailable );
             }
             
-            // Open or create the map in shared memory
+            // 4. Open or create the map in shared memory
             shm::context.mapValue = shm::context.segment.find_or_construct< shm::SHM_MapValue >( 
-                strFile.data() 
+                identifier.data() 
             )( shm::context.segment.get_segment_manager() );
 
             if ( nullptr == shm::context.mapValue ) {
@@ -364,7 +550,16 @@ namespace util
                 throw PerException( PerErrc::kInitValueNotAvailable );
             }
             
-            LAP_PER_LOG_INFO << "KvsPropertyBackend initialized with SHM name: " << core::StringView(shm::context.shmName);
+            // 5. Load existing data from persistence backend to shared memory (skip if kvsNone)
+            auto loadResult = loadFromPersistence();
+            if (!loadResult.HasValue()) {
+                LAP_PER_LOG_WARN << "Failed to load from persistence, starting with empty shared memory";
+            }
+            
+            m_strShmName = shm::context.shmName;
+            LAP_PER_LOG_INFO << "KvsPropertyBackend initialized with SHM name: " << core::StringView(m_strShmName) 
+                             << ", identifier: " << identifier
+                             << ", size: " << (m_shmSize / 1024) << " KB";
         } catch ( std::exception &e ) {
             LAP_PER_LOG_ERROR << "KvsPropertyBackend initialization failed: " << e.what();
             throw PerException( PerErrc::kInitValueNotAvailable );
@@ -375,7 +570,14 @@ namespace util
 
     KvsPropertyBackend::~KvsPropertyBackend() noexcept
     {
-        ;
+        // Auto-sync on destruction if dirty
+        if (m_bDirty && m_pPersistenceBackend && m_pPersistenceBackend->available()) {
+            LAP_PER_LOG_INFO << "Auto-syncing dirty data on Property backend destruction";
+            auto result = saveToPersistence();
+            if (!result.HasValue()) {
+                LAP_PER_LOG_ERROR << "Failed to auto-sync on destruction";
+            }
+        }
     }
 } // util
 } // pm

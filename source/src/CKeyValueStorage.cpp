@@ -1,5 +1,5 @@
 #include "CKeyValueStorage.hpp"
-#include "CKvsBackend.hpp"
+#include "IKvsBackend.hpp"
 #include "CKvsFileBackend.hpp"
 #include "CKvsSqliteBackend.hpp"
 #include "CKvsPropertyBackend.hpp"
@@ -23,9 +23,52 @@ namespace per
             if ( type & KvsBackendType::kvsFile ) {
                 m_pKvsBackend = ::std::make_unique< KvsFileBackend >( strIdentifier );
             } else if ( type & KvsBackendType::kvsSqlite ) {
+                // SQLite backend now fully implements IKvsBackend interface
                 m_pKvsBackend = ::std::make_unique< KvsSqliteBackend >( strIdentifier );
             } else if ( type & KvsBackendType::kvsProperty ) {
-                m_pKvsBackend = ::std::make_unique< ::lap::per::util::KvsPropertyBackend >( strIdentifier );
+                // Property backend with configurable persistence (File or SQLite)
+                // Default to File backend for persistence
+                m_pKvsBackend = ::std::make_unique< ::lap::per::util::KvsPropertyBackend >( 
+                    strIdentifier, 
+                    KvsBackendType::kvsFile  // Use File backend as persistence layer
+                );
+            } else {
+                LAP_PER_LOG_ERROR << "Kvs backend type is not recognized, default to FileBackend";
+                m_pKvsBackend = ::std::make_unique< KvsFileBackend >( strIdentifier );
+            }
+        } catch( const PerException& e ) {
+            LAP_PER_LOG_ERROR << "Kvs backend create failed " << e.what();
+        }
+    }
+
+    KeyValueStorage::KeyValueStorage ( core::StringView strIdentifier, const KvsBackendType &type, const PersistencyConfig* config ) noexcept
+        : m_strPath( strIdentifier )
+    {
+        try {
+            if ( type & KvsBackendType::kvsFile ) {
+                m_pKvsBackend = ::std::make_unique< KvsFileBackend >( strIdentifier );
+            } else if ( type & KvsBackendType::kvsSqlite ) {
+                m_pKvsBackend = ::std::make_unique< KvsSqliteBackend >( strIdentifier );
+            } else if ( type & KvsBackendType::kvsProperty ) {
+                // Property backend with config support
+                KvsBackendType persistenceBackend = KvsBackendType::kvsFile;
+                core::Size shmSize = 1ul << 20;  // Default 1MB
+                
+                if (config != nullptr) {
+                    // Use configured persistence backend
+                    if (config->kvs.propertyBackendPersistence == "sqlite") {
+                        persistenceBackend = KvsBackendType::kvsSqlite;
+                    }
+                    // Shared memory size will be read from config in constructor
+                    shmSize = config->kvs.propertyBackendShmSize;
+                }
+                
+                m_pKvsBackend = ::std::make_unique< ::lap::per::util::KvsPropertyBackend >( 
+                    strIdentifier, 
+                    persistenceBackend,
+                    shmSize,
+                    config  // Pass config for additional settings
+                );
             } else {
                 LAP_PER_LOG_ERROR << "Kvs backend type is not recognized, default to FileBackend";
                 m_pKvsBackend = ::std::make_unique< KvsFileBackend >( strIdentifier );
@@ -154,15 +197,15 @@ namespace per
         return m_pKvsBackend->RemoveKey( key );
     }
 
-    core::Result<void> KeyValueStorage::RecoveryKey( core::StringView key ) noexcept
+    core::Result<void> KeyValueStorage::RecoverKey( core::StringView key ) noexcept
     {
         if ( !m_pKvsBackend || !m_pKvsBackend->available() ) return core::Result<void>::FromError( PerErrc::kNotInitialized );
 
-        return m_pKvsBackend->RecoveryKey( key );
+        return m_pKvsBackend->RecoverKey( key );
     }
 
     core::Result<void> KeyValueStorage::ResetKey( core::StringView key ) noexcept
-    {
+{
         if ( !m_pKvsBackend || !m_pKvsBackend->available() ) return core::Result<void>::FromError( PerErrc::kNotInitialized );
 
         return m_pKvsBackend->ResetKey( key );

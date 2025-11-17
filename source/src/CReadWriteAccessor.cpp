@@ -15,6 +15,19 @@ namespace per
         ;
     }
 
+    core::Result< core::String > ReadWriteAccessor::ReadText () noexcept
+    {
+        using result = core::Result< core::String >;
+        
+        // If opened in write-only mode (kOut without kIn), disallow reading
+        if ( checkWrite() && !checkRead() ) {
+            return result::FromError( PerErrc::kInvalidOpenMode );
+        }
+        
+        // Otherwise, use base class implementation
+        return ReadAccessor::ReadText();
+    }
+
     core::Result<void> ReadWriteAccessor::SyncToFile () noexcept
     {
         using result = core::Result<void>;

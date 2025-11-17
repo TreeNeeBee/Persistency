@@ -1,0 +1,26 @@
+{
+    "Persistency": {
+        "Backend": {
+            "Type": "kvsProperty",
+            "SharedMemorySize": 8388608,
+            "PersistenceBackend": "kvsFile",
+            "Comments": "8MB shared memory, File backend for persistence"
+        },
+        "Storage": {
+            "RootPath": "/tmp/lightap_persistency",
+            "EncryptionEnabled": false
+        },
+        "PropertyBackend": {
+            "DefaultSharedMemorySize": 8388608,
+            "MaxSharedMemorySize": 67108864,
+            "EnableAutoSync": true,
+            "AutoSyncIntervalMs": 5000,
+            "Comments": "Default 8MB, max 64MB, auto-sync every 5 seconds"
+        },
+        "Performance": {
+            "CacheSize": 1000,
+            "EnableWriteAheadLog": true,
+            "BatchWriteThreshold": 100
+        }
+    }
+}

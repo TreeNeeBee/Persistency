@@ -16,31 +16,35 @@
 #include <memory>
 
 #include "CDataType.hpp"
-#include "CKvsBackend.hpp"
+#include "IKvsBackend.hpp"
 
 namespace lap
 {
 namespace per
 {
     class KeyValueStorage;
-    class KvsSqliteBackend final : public KvsBackend
+    class KvsSqliteBackend final : public IKvsBackend
     {
     public:
         IMP_OPERATOR_NEW(KvsSqliteBackend)
     
     public:
         core::Bool                                                      available() const noexcept override { return m_bAvailable; }
+        KvsBackendType                                                  GetBackendType() const noexcept override { return KvsBackendType::kvsSqlite; }
+        core::Bool                                                      SupportsPersistence() const noexcept override { return true; }
 
         core::Result< core::Vector< core::String > >                    GetAllKeys() const noexcept override;
         core::Result< core::Bool >                                      KeyExists ( core::StringView key ) const noexcept override;
         core::Result< KvsDataType >                                     GetValue( core::StringView key ) const noexcept override;
         core::Result< void >                                            SetValue( core::StringView key, const KvsDataType &value ) noexcept override;
         core::Result< void >                                            RemoveKey( core::StringView key ) noexcept override;
-        core::Result< void >                                            RecoveryKey( core::StringView key ) noexcept override;
+        core::Result< void >                                            RecoverKey( core::StringView key ) noexcept override;
         core::Result< void >                                            ResetKey( core::StringView key ) noexcept override;
         core::Result< void >                                            RemoveAllKeys() noexcept override;
         core::Result< void >                                            SyncToStorage() noexcept override;
         core::Result< void >                                            DiscardPendingChanges() noexcept override;
+        core::Result< core::UInt64 >                                    GetSize() const noexcept override;
+        core::Result< core::UInt32 >                                    GetKeyCount() const noexcept override;
 
         ~KvsSqliteBackend();
         explicit KvsSqliteBackend( core::StringView );
@@ -62,9 +66,10 @@ namespace per
         core::Result< void >                commitTransaction() noexcept;
         core::Result< void >                rollbackTransaction() noexcept;
         
-        // Type encoding/decoding (consistent with PropertyBackend Solution B)
+        // Type encoding/decoding (optimized with separate type column)
+        core::Int32                         getTypeIndex( const KvsDataType& value ) const noexcept;
         core::String                        encodeValue( const KvsDataType& value ) const noexcept;
-        core::Result< KvsDataType >         decodeValue( core::StringView encodedValue ) const noexcept;
+        core::Result< KvsDataType >         decodeValue( core::Int32 typeIndex, core::StringView valueStr ) const noexcept;
         
         // Error handling
         core::ErrorCode                     makeErrorCode( core::Int32 sqliteCode ) const noexcept;

@@ -47,7 +47,9 @@ namespace per
         kUnsupported                = 20,
         kWrongDataType              = 21,     // NEW: AUTOSAR type validation
         kWrongDataSize              = 22,     // NEW: AUTOSAR size validation
-        kInvalidKey                 = 23      // NEW: AUTOSAR key validation
+        kInvalidKey                 = 23,     // NEW: AUTOSAR key validation
+        kInvalidArgument            = 24,     // NEW: Invalid argument provided
+        kChecksumMismatch           = 25      // NEW: Checksum verification failed
     };
 
     inline constexpr const core::Char* PerErrMessage( PerErrc errCode )
@@ -101,6 +103,10 @@ namespace per
             return "The data size provided does not match the expected size.";
         case PerErrc::kInvalidKey:
             return "The provided key is invalid or malformed.";
+        case PerErrc::kInvalidArgument:
+            return "Invalid argument provided to the function.";
+        case PerErrc::kChecksumMismatch:
+            return "Checksum verification failed - data integrity compromised.";
         default:
             return "Unknown error";
         }

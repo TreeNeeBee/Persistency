@@ -18,7 +18,7 @@ namespace lap
 {
 namespace per
 {
-    class KvsBackend;
+    class IKvsBackend;
     class KeyValueStorage final
     {
     public:
@@ -42,7 +42,7 @@ namespace per
         core::Result<void>                                              SetValue( core::StringView key, const T& value ) noexcept;
 
         core::Result<void>                                              RemoveKey( core::StringView key ) noexcept;
-        core::Result<void>                                              RecoveryKey( core::StringView key ) noexcept;
+        core::Result<void>                                              RecoverKey( core::StringView key ) noexcept;
         core::Result<void>                                              ResetKey( core::StringView key ) noexcept;
         core::Result<void>                                              RemoveAllKeys() noexcept;
         core::Result<void>                                              SyncToStorage() const noexcept;
@@ -71,8 +71,19 @@ namespace per
             return ::std::allocate_shared< KeyValueStorage >( _KeyValueStorage(), path, type ); 
         }
 
+        static core::SharedHandle< KeyValueStorage > create( core::StringView path, const KvsBackendType& type, const PersistencyConfig* config ) noexcept
+        {
+            struct _KeyValueStorage : std::allocator< KeyValueStorage > {
+                void construct( void* p, core::StringView path, const KvsBackendType& type, const PersistencyConfig* config ) noexcept   { ::new( p ) KeyValueStorage( path, type, config ); }
+                void destroy( KeyValueStorage* p ) noexcept                                             { p->~KeyValueStorage(); }
+            };
+
+            return ::std::allocate_shared< KeyValueStorage >( _KeyValueStorage(), path, type, config ); 
+        }
+
         explicit KeyValueStorage( core::StringView ) noexcept;
         explicit KeyValueStorage( core::StringView, const KvsBackendType & ) noexcept;
+        explicit KeyValueStorage( core::StringView, const KvsBackendType &, const PersistencyConfig* ) noexcept;
 
         KeyValueStorage( KeyValueStorage&& ) noexcept;
         KeyValueStorage& operator=( KeyValueStorage&& ) noexcept;
@@ -88,7 +99,7 @@ namespace per
         core::Bool                                      m_bInitialized{ false };
         core::Bool                                      m_bResourceBusy{ false };
         core::StringView                                m_strPath;
-        core::UniqueHandle< KvsBackend >                m_pKvsBackend;
+        core::UniqueHandle< IKvsBackend >               m_pKvsBackend;
     };
 
     core::Result< core::SharedHandle< KeyValueStorage > >               OpenKeyValueStorage( const core::InstanceSpecifier &, core::Bool, KvsBackendType ) noexcept;

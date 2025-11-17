@@ -52,7 +52,7 @@ namespace per
         virtual core::Result<void>                                              SetValue( core::StringView key, const KvsDataType &value ) noexcept;
 
         virtual core::Result<void>                                              RemoveKey( core::StringView key ) noexcept;
-        virtual core::Result<void>                                              RecoveryKey( core::StringView key ) noexcept;
+        virtual core::Result<void>                                              RecoverKey( core::StringView key ) noexcept;
         virtual core::Result<void>                                              ResetKey( core::StringView key ) noexcept;
         virtual core::Result<void>                                              RemoveAllKeys() noexcept;
         virtual core::Result<void>                                              SyncToStorage() noexcept;

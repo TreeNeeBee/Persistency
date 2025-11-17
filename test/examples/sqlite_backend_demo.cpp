@@ -289,7 +289,7 @@ void testSoftDelete() {
     std::cout << "Key exists after delete: " << (after.Value() ? "Yes" : "No") << "\n";
     
     std::cout << "Recovering key...\n";
-    backend.RecoveryKey("delete_test");
+    backend.RecoverKey("delete_test");
     
     auto recovered = backend.KeyExists("delete_test");
     std::cout << "Key exists after recovery: " << (recovered.Value() ? "Yes" : "No") << "\n";

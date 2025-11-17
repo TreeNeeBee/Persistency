@@ -13,16 +13,36 @@ namespace per
         m_fpStream = ::std::make_unique< ::std::fstream >();
 
         try {
-            ::boost::system::error_code ec;
-            if ( !::boost::filesystem::is_regular_file( strFilePath.data(), ec ) ) {
-                throw PerException( PerErrc::kFileNotFound );
+            // Get actual file path from backend
+            core::String actualPath;
+            if (parent && parent->GetBackend()) {
+                auto pathUri = parent->GetBackend()->GetFileUri(strFilePath.data(), LAP_PER_CATEGORY_CURRENT);
+                actualPath = pathUri.GetFullPath();
+            } else {
+                actualPath = strFilePath.data();
             }
 
-            if ( !::boost::filesystem::exists( strFilePath.data(), ec ) )   updateCreateTime();
+            ::boost::system::error_code ec;
+            core::Bool fileExists = ::boost::filesystem::exists( actualPath.c_str(), ec );
+            
+            // For write modes, create parent directory if needed
+            if (static_cast<core::UInt32>(mode & OpenMode::kOut) != 0) {
+                ::boost::filesystem::path p(actualPath.c_str());
+                if (p.has_parent_path()) {
+                    ::boost::filesystem::create_directories(p.parent_path(), ec);
+                }
+            } else {
+                // For read-only mode, file must exist
+                if ( !fileExists || !::boost::filesystem::is_regular_file( actualPath.c_str(), ec ) ) {
+                    throw PerException( PerErrc::kFileNotFound );
+                }
+            }
 
-            m_fpStream->open( strFilePath.data(), convert( mode ) );
+            if ( !fileExists )   updateCreateTime();
+
+            m_fpStream->open( actualPath.c_str(), convert( mode ) );
 #ifdef LAP_DEBUG
-            LAP_PER_LOG_DEBUG.logFormat( "ReadAccessor open with %s, mode: 0x0x%x", m_strFile.data(), static_cast< core::Int32 >( m_openMode ) );
+            LAP_PER_LOG_DEBUG.logFormat( "ReadAccessor open with %s, mode: 0x%x", actualPath.c_str(), static_cast< core::Int32 >( m_openMode ) );
 #endif
         } catch ( const ::std::ios_base::failure& fail ) {
             LAP_PER_LOG_ERROR << "ReadAccessor open failed " << fail.what();
@@ -294,6 +314,8 @@ namespace per
     {
         assert( m_fpStream );
 
+        // Peek to update EOF flag if at end
+        m_fpStream->peek();
         return m_fpStream->eof();
     }
 

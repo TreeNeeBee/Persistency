@@ -1,0 +1,37 @@
+{
+  "__comment__": "Persistency Module Configuration",
+  "__metadata__": {
+    "version": "1.0.0",
+    "description": "AUTOSAR Persistency configuration with Property backend settings"
+  },
+  
+  "centralStorageURI": "/tmp/autosar_persistency",
+  "replicaCount": 3,
+  "minValidReplicas": 2,
+  "checksumType": "CRC32",
+  "contractVersion": "1.0.0",
+  "deploymentVersion": "1.0.0",
+  "redundancyHandling": "KEEP_REDUNDANCY",
+  "updateStrategy": "KEEP_LAST_VALID",
+  
+  "kvs": {
+    "__comment__": "Key-Value Storage backend configuration",
+    "backendType": "property",
+    "dataSourceType": "",
+    
+    "__property_backend_config__": "Configuration for Property (shared memory) backend",
+    "propertyBackendShmSize": 16777216,
+    "propertyBackendShmSize_comment": "Shared memory size in bytes (16777216 = 16MB, 1048576 = 1MB, 4194304 = 4MB)",
+    "propertyBackendPersistence": "file",
+    "propertyBackendPersistence_comment": "Persistence backend type: 'file' or 'sqlite'"
+  },
+  
+  "__size_recommendations__": {
+    "512KB": 524288,
+    "1MB": 1048576,
+    "4MB": 4194304,
+    "16MB": 16777216,
+    "32MB": 33554432,
+    "64MB": 67108864
+  }
+}

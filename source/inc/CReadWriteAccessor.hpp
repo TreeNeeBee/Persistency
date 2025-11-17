@@ -32,6 +32,9 @@ namespace per
         core::Result< void >            WriteText ( core::StringView s ) noexcept;
         core::Result< void >            WriteBinary ( core::Span< const core::Byte > b ) noexcept;
 
+        // Override ReadText to enforce write-only restriction  
+        core::Result< core::String >    ReadText () noexcept override;
+
         ReadWriteAccessor&              operator<< ( core::StringView s ) noexcept;
 
         // template< typename...Args >

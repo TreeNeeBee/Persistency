@@ -1,4 +1,5 @@
 #include "CKvsSqliteBackend.hpp"
+#include "CStoragePathManager.hpp"
 #include <sstream>
 #include <iomanip>
 #include <limits>
@@ -9,14 +10,30 @@ namespace per
 {
     // ==================== Constructor/Destructor ====================
     
-    KvsSqliteBackend::KvsSqliteBackend( core::StringView file )
-        : m_strFile( file )
+    KvsSqliteBackend::KvsSqliteBackend( core::StringView identifier )
+        : m_strFile()
     {
+        // Use AUTOSAR 4-layer directory structure with /current/db.sqlite
+        core::String instancePath = CStoragePathManager::getKvsInstancePath( identifier );
+        
+        // Ensure directory exists - create the 4-layer structure
+        if (!core::Path::createDirectory(instancePath + "/current") ||
+            !core::Path::createDirectory(instancePath + "/update") ||
+            !core::Path::createDirectory(instancePath + "/redundancy") ||
+            !core::Path::createDirectory(instancePath + "/recovery"))
+        {
+            LAP_PER_LOG_ERROR << "Failed to create storage structure for: " << identifier;
+            return;
+        }
+        
+        // Database file in /current directory
+        m_strFile = instancePath + "/current/db.sqlite";
+        
         {
             auto result = initializeDatabase();
             if( !result.HasValue() )
             {
-                LAP_PER_LOG_ERROR << "Failed to initialize database: " << core::StringView(m_strFile);
+                LAP_PER_LOG_ERROR << "Failed to initialize database: " << identifier;
                 return;
             }
         }
@@ -31,7 +48,7 @@ namespace per
         }
         
         m_bAvailable = true;
-        LAP_PER_LOG_INFO << "SQLite backend initialized successfully: " << core::StringView(m_strFile);
+        LAP_PER_LOG_INFO << "SQLite backend initialized successfully: " << identifier << " -> " << core::StringView(m_strFile);
     }
 
     KvsSqliteBackend::KvsSqliteBackend( KvsSqliteBackend&& kvs )
@@ -128,10 +145,13 @@ namespace per
             if( errMsg ) sqlite3_free( errMsg );
         }
         
-        // Create table with optimized schema
+        // Create table with optimized schema (type as separate INTEGER column)
+        // Type mapping: 0=Int8, 1=UInt8, 2=Int16, 3=UInt16, 4=Int32, 5=UInt32,
+        //               6=Int64, 7=UInt64, 8=Bool, 9=Float, 10=Double, 11=String
         const char* createTableSQL = 
             "CREATE TABLE IF NOT EXISTS kvs_data ("
             "    key TEXT PRIMARY KEY NOT NULL,"
+            "    type INTEGER NOT NULL,"      // Type as INTEGER, not prefix
             "    value TEXT NOT NULL,"
             "    deleted INTEGER DEFAULT 0"
             ") WITHOUT ROWID;";  // WITHOUT ROWID for better performance with TEXT primary key
@@ -153,6 +173,15 @@ namespace per
             if( errMsg ) sqlite3_free( errMsg );
         }
         
+        // Create index on type column for type-based queries
+        const char* createTypeIndexSQL = "CREATE INDEX IF NOT EXISTS idx_type ON kvs_data(type) WHERE deleted = 0;";
+        rc = sqlite3_exec( m_pDB, createTypeIndexSQL, nullptr, nullptr, &errMsg );
+        if( rc != SQLITE_OK )
+        {
+            LAP_PER_LOG_WARN << "Failed to create type index: " << ( errMsg ? errMsg : "unknown error" );
+            if( errMsg ) sqlite3_free( errMsg );
+        }
+        
         return core::Result< void >::FromValue();
     }
 
@@ -164,8 +193,8 @@ namespace per
         
         core::Int32 rc;
         
-        // INSERT OR REPLACE statement
-        const char* insertSQL = "INSERT OR REPLACE INTO kvs_data (key, value, deleted) VALUES (?, ?, 0);";
+        // INSERT OR REPLACE statement (now includes type column)
+        const char* insertSQL = "INSERT OR REPLACE INTO kvs_data (key, type, value, deleted) VALUES (?, ?, ?, 0);";
         rc = sqlite3_prepare_v2( m_pDB, insertSQL, -1, &m_pStmtInsert, nullptr );
         if( rc != SQLITE_OK )
         {
@@ -173,8 +202,8 @@ namespace per
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
         
-        // UPDATE statement
-        const char* updateSQL = "UPDATE kvs_data SET value = ?, deleted = 0 WHERE key = ?;";
+        // UPDATE statement (now includes type column)
+        const char* updateSQL = "UPDATE kvs_data SET type = ?, value = ?, deleted = 0 WHERE key = ?;";
         rc = sqlite3_prepare_v2( m_pDB, updateSQL, -1, &m_pStmtUpdate, nullptr );
         if( rc != SQLITE_OK )
         {
@@ -182,8 +211,8 @@ namespace per
             return core::Result< void >::FromError( makeErrorCode( rc ) );
         }
         
-        // SELECT statement
-        const char* selectSQL = "SELECT value FROM kvs_data WHERE key = ? AND deleted = 0;";
+        // SELECT statement (now retrieves both type and value)
+        const char* selectSQL = "SELECT type, value FROM kvs_data WHERE key = ? AND deleted = 0;";
         rc = sqlite3_prepare_v2( m_pDB, selectSQL, -1, &m_pStmtSelect, nullptr );
         if( rc != SQLITE_OK )
         {
@@ -296,24 +325,25 @@ namespace per
         return core::Result< void >::FromValue();
     }
 
-    // ==================== Type Encoding/Decoding (Solution B) ====================
+    // ==================== Type Encoding/Decoding (Optimized with separate type column) ====================
     
+    // Extract type index from KvsDataType variant
+    core::Int32 KvsSqliteBackend::getTypeIndex( const KvsDataType& value ) const noexcept
+    {
+        return static_cast<core::Int32>( ::lap::core::GetVariantIndex( value ) );
+    }
+    
+    // Encode value to string WITHOUT type prefix (type stored separately)
     core::String KvsSqliteBackend::encodeValue( const KvsDataType& value ) const noexcept
     {
-        core::String result;
-        
-        // First byte is type marker: 'a' + type_index
-        char typeMarker = 'a' + static_cast<char>( ::lap::core::GetVariantIndex( value ) );
-        result += typeMarker;
-        
-        // Convert value to string with full precision
+        // Convert value to string with full precision (no type prefix needed)
         ::std::ostringstream oss;
         oss << ::std::setprecision( ::std::numeric_limits<core::Double>::max_digits10 );
         
         switch( ::lap::core::GetVariantIndex( value ) )
         {
-            case 0:  oss << ::lap::core::get<core::Int8>( value );    break;
-            case 1:  oss << ::lap::core::get<core::UInt8>( value );   break;
+            case 0:  oss << static_cast<core::Int32>(::lap::core::get<core::Int8>( value ));    break;
+            case 1:  oss << static_cast<core::UInt32>(::lap::core::get<core::UInt8>( value ));   break;
             case 2:  oss << ::lap::core::get<core::Int16>( value );   break;
             case 3:  oss << ::lap::core::get<core::UInt16>( value );  break;
             case 4:  oss << ::lap::core::get<core::Int32>( value );   break;
@@ -323,43 +353,34 @@ namespace per
             case 8:  oss << ( ::lap::core::get<core::Bool>( value ) ? "1" : "0" ); break;
             case 9:  oss << ::lap::core::get<core::Float>( value );   break;
             case 10: oss << ::lap::core::get<core::Double>( value );  break;
-            case 11: oss << ::lap::core::get<core::String>( value );  break;
+            case 11: return ::lap::core::get<core::String>( value );  // String directly, no conversion needed
             default:
                 LAP_PER_LOG_ERROR << "Unknown variant type: " << ::lap::core::GetVariantIndex( value );
-                break;
+                return "";
         }
         
-        result += oss.str();
-        return result;
+        return oss.str();
     }
 
-    core::Result< KvsDataType > KvsSqliteBackend::decodeValue( core::StringView encodedValue ) const noexcept
+    // Decode value from string using separate type index (no prefix parsing)
+    core::Result< KvsDataType > KvsSqliteBackend::decodeValue( core::Int32 typeIndex, core::StringView valueStr ) const noexcept
     {
-        if( encodedValue.empty() )
-        {
-            return core::Result< KvsDataType >::FromError( PerErrc::kIntegrityCorrupted );
-        }
-        
-        // Extract type from first byte
-        core::Int32 typeIndex = static_cast<core::Int32>( encodedValue[0] - 'a' );
-        core::StringView dataStr = encodedValue.substr( 1 );
-        
         try
         {
             switch( typeIndex )
             {
-                case 0:  return core::Result< KvsDataType >::FromValue( static_cast<core::Int8>( ::std::stoi( core::String( dataStr ) ) ) );
-                case 1:  return core::Result< KvsDataType >::FromValue( static_cast<core::UInt8>( ::std::stoul( core::String( dataStr ) ) ) );
-                case 2:  return core::Result< KvsDataType >::FromValue( static_cast<core::Int16>( ::std::stoi( core::String( dataStr ) ) ) );
-                case 3:  return core::Result< KvsDataType >::FromValue( static_cast<core::UInt16>( ::std::stoul( core::String( dataStr ) ) ) );
-                case 4:  return core::Result< KvsDataType >::FromValue( static_cast<core::Int32>( ::std::stoi( core::String( dataStr ) ) ) );
-                case 5:  return core::Result< KvsDataType >::FromValue( static_cast<core::UInt32>( ::std::stoul( core::String( dataStr ) ) ) );
-                case 6:  return core::Result< KvsDataType >::FromValue( static_cast<core::Int64>( ::std::stoll( core::String( dataStr ) ) ) );
-                case 7:  return core::Result< KvsDataType >::FromValue( static_cast<core::UInt64>( ::std::stoull( core::String( dataStr ) ) ) );
-                case 8:  return core::Result< KvsDataType >::FromValue( static_cast<core::Bool>( dataStr == "1" ) );
-                case 9:  return core::Result< KvsDataType >::FromValue( static_cast<core::Float>( ::std::stof( core::String( dataStr ) ) ) );
-                case 10: return core::Result< KvsDataType >::FromValue( static_cast<core::Double>( ::std::stod( core::String( dataStr ) ) ) );
-                case 11: return core::Result< KvsDataType >::FromValue( core::String( dataStr ) );
+                case 0:  return core::Result< KvsDataType >::FromValue( static_cast<core::Int8>( ::std::stoi( core::String( valueStr ) ) ) );
+                case 1:  return core::Result< KvsDataType >::FromValue( static_cast<core::UInt8>( ::std::stoul( core::String( valueStr ) ) ) );
+                case 2:  return core::Result< KvsDataType >::FromValue( static_cast<core::Int16>( ::std::stoi( core::String( valueStr ) ) ) );
+                case 3:  return core::Result< KvsDataType >::FromValue( static_cast<core::UInt16>( ::std::stoul( core::String( valueStr ) ) ) );
+                case 4:  return core::Result< KvsDataType >::FromValue( static_cast<core::Int32>( ::std::stoi( core::String( valueStr ) ) ) );
+                case 5:  return core::Result< KvsDataType >::FromValue( static_cast<core::UInt32>( ::std::stoul( core::String( valueStr ) ) ) );
+                case 6:  return core::Result< KvsDataType >::FromValue( static_cast<core::Int64>( ::std::stoll( core::String( valueStr ) ) ) );
+                case 7:  return core::Result< KvsDataType >::FromValue( static_cast<core::UInt64>( ::std::stoull( core::String( valueStr ) ) ) );
+                case 8:  return core::Result< KvsDataType >::FromValue( static_cast<core::Bool>( valueStr == "1" ) );
+                case 9:  return core::Result< KvsDataType >::FromValue( static_cast<core::Float>( ::std::stof( core::String( valueStr ) ) ) );
+                case 10: return core::Result< KvsDataType >::FromValue( static_cast<core::Double>( ::std::stod( core::String( valueStr ) ) ) );
+                case 11: return core::Result< KvsDataType >::FromValue( core::String( valueStr ) );
                 default:
                     LAP_PER_LOG_ERROR << "Invalid type index: " << typeIndex;
                     return core::Result< KvsDataType >::FromError( PerErrc::kIntegrityCorrupted );
@@ -457,14 +478,19 @@ namespace per
         
         if( rc == SQLITE_ROW )
         {
-            const char* encodedValue = reinterpret_cast<const char*>( sqlite3_column_text( m_pStmtSelect, 0 ) );
-            if( !encodedValue )
+            // Get type from column 0 (INTEGER)
+            core::Int32 typeIndex = sqlite3_column_int( m_pStmtSelect, 0 );
+            
+            // Get value from column 1 (TEXT)
+            const char* valueStr = reinterpret_cast<const char*>( sqlite3_column_text( m_pStmtSelect, 1 ) );
+            if( !valueStr )
             {
                 LAP_PER_LOG_ERROR << "NULL value returned for key: " << key;
                 return result::FromError( PerErrc::kIntegrityCorrupted );
             }
             
-            return decodeValue( encodedValue );
+            // Decode using separate type index
+            return decodeValue( typeIndex, valueStr );
         }
         else if( rc == SQLITE_DONE )
         {
@@ -488,11 +514,14 @@ namespace per
         
         core::LockGuard lock( m_mutex );
         
+        // Get type index and encode value separately
+        core::Int32 typeIndex = getTypeIndex( value );
         core::String encodedValue = encodeValue( value );
         
         sqlite3_reset( m_pStmtInsert );
         sqlite3_bind_text( m_pStmtInsert, 1, key.data(), key.size(), SQLITE_STATIC );
-        sqlite3_bind_text( m_pStmtInsert, 2, encodedValue.c_str(), encodedValue.size(), SQLITE_TRANSIENT );
+        sqlite3_bind_int( m_pStmtInsert, 2, typeIndex );  // Bind type as INTEGER
+        sqlite3_bind_text( m_pStmtInsert, 3, encodedValue.c_str(), encodedValue.size(), SQLITE_TRANSIENT );
         
         core::Int32 rc = sqlite3_step( m_pStmtInsert );
         
@@ -530,7 +559,7 @@ namespace per
         return result::FromValue();
     }
 
-    core::Result<void> KvsSqliteBackend::RecoveryKey( core::StringView key ) noexcept
+    core::Result<void> KvsSqliteBackend::RecoverKey( core::StringView key ) noexcept
     {
         using result = core::Result< void >;
         
@@ -688,6 +717,73 @@ namespace per
         }
         
         return result::FromValue();
+    }
+
+    // ==================== Utility Methods ====================
+    
+    core::Result< core::UInt64 > KvsSqliteBackend::GetSize() const noexcept
+    {
+        using result = core::Result< core::UInt64 >;
+        
+        if( !m_bAvailable )
+        {
+            return result::FromError( PerErrc::kNotInitialized );
+        }
+        
+        try
+        {
+            // Get file size of the database
+            ::std::error_code ec;
+            auto fileSize = ::std::filesystem::file_size( m_strFile, ec );
+            
+            if( ec )
+            {
+                LAP_PER_LOG_ERROR << "Failed to get database file size: " << ec.message();
+                return result::FromError( PerErrc::kPhysicalStorageFailure );
+            }
+            
+            return result::FromValue( static_cast<core::UInt64>( fileSize ) );
+        }
+        catch( const ::std::exception& e )
+        {
+            LAP_PER_LOG_ERROR << "Exception getting database size: " << e.what();
+            return result::FromError( PerErrc::kPhysicalStorageFailure );
+        }
+    }
+
+    core::Result< core::UInt32 > KvsSqliteBackend::GetKeyCount() const noexcept
+    {
+        using result = core::Result< core::UInt32 >;
+        
+        if( !m_bAvailable )
+        {
+            return result::FromError( PerErrc::kNotInitialized );
+        }
+        
+        core::LockGuard lock( m_mutex );
+        
+        const char* countSQL = "SELECT COUNT(*) FROM kvs_data WHERE deleted = 0;";
+        sqlite3_stmt* stmt = nullptr;
+        
+        core::Int32 rc = sqlite3_prepare_v2( m_pDB, countSQL, -1, &stmt, nullptr );
+        if( rc != SQLITE_OK )
+        {
+            LAP_PER_LOG_ERROR << "Failed to prepare count statement: " << sqlite3_errmsg( m_pDB );
+            return result::FromError( makeErrorCode( rc ) );
+        }
+        
+        rc = sqlite3_step( stmt );
+        if( rc != SQLITE_ROW )
+        {
+            sqlite3_finalize( stmt );
+            LAP_PER_LOG_ERROR << "Failed to get key count: " << sqlite3_errmsg( m_pDB );
+            return result::FromError( makeErrorCode( rc ) );
+        }
+        
+        core::UInt32 count = static_cast<core::UInt32>( sqlite3_column_int( stmt, 0 ) );
+        sqlite3_finalize( stmt );
+        
+        return result::FromValue( count );
     }
 
     // ==================== Error Handling ====================

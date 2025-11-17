@@ -36,7 +36,7 @@ namespace per
         core::Result< core::Char >                      GetChar () noexcept;
         core::Result< core::Byte >                      GetByte () noexcept;
 
-        core::Result< core::String >                    ReadText () noexcept;
+        virtual core::Result< core::String >            ReadText () noexcept;
         core::Result< core::String >                    ReadText ( core::UInt64 n ) noexcept;
 
         core::Result< core::Vector< core::Byte > >      ReadBinary () noexcept;

@@ -25,6 +25,29 @@ namespace lap
 {
 namespace per 
 {
+    // ========================================================================
+    // Checksum/Hash Types for Integrity Verification
+    // ========================================================================
+    /**
+     * @brief Checksum algorithm type
+     */
+    enum class ChecksumType : core::UInt8 {
+        kCRC32 = 0,     // Fast, suitable for error detection
+        kSHA256 = 1     // Cryptographically secure, slower
+    };
+
+    /**
+     * @brief Checksum result structure
+     */
+    struct ChecksumResult {
+        ChecksumType type;
+        core::String value;         // Hex string representation
+        core::UInt64 calculationTime; // Time taken in microseconds
+    };
+
+    // ========================================================================
+    // Logging Configuration
+    // ========================================================================
     #define LAP_PER_LOG_CONTEXT_ID       "PM"
     #define LAP_PER_LOG_CONTEXT_DESC     "PM log ctx"
 
@@ -45,6 +68,43 @@ namespace per
     #define LAP_PER_LOG_ERROR            LAP_PER_LOG.LogError().WithLocation( __FILE__, __LINE__ )
     #define LAP_PER_LOG_FATAL            LAP_PER_LOG.LogFatal().WithLocation( __FILE__, __LINE__ )
 
+    // ========================================================================
+    // AUTOSAR File Storage Default Configuration
+    // ========================================================================
+    // Storage size limits (in bytes)
+    #define LAP_PER_DEFAULT_MIN_SUSTAINED_SIZE      (1024ULL * 1024ULL)          // 1 MB
+    #define LAP_PER_DEFAULT_MAX_ALLOWED_SIZE        (100ULL * 1024ULL * 1024ULL) // 100 MB
+    
+    // File count limits
+    #define LAP_PER_DEFAULT_MAX_FILE_COUNT          1000U
+    
+    // Default version strings
+    #define LAP_PER_DEFAULT_VERSION                 "1.0.0"
+    
+    // Directory configuration
+    #define LAP_PER_METADATA_DIR                    ".metadata"
+    #define LAP_PER_REPLICA_DIR_PREFIX              "replica_"
+    
+    // Replica configuration (M-out-of-N redundancy)
+    #define LAP_PER_DEFAULT_REPLICA_COUNT           3U      // N: Total number of replicas
+    #define LAP_PER_MIN_VALID_REPLICAS              2U      // M: Minimum valid replicas required
+    
+    // Checksum/Hash configuration
+    #define LAP_PER_CHECKSUM_TYPE_CRC32             "CRC32"
+    #define LAP_PER_CHECKSUM_TYPE_SHA256            "SHA256"
+    #define LAP_PER_DEFAULT_CHECKSUM_TYPE           LAP_PER_CHECKSUM_TYPE_CRC32
+    
+    // Metadata file names
+    #define LAP_PER_STORAGE_INFO_FILE               "storage_info.json"
+    #define LAP_PER_PARTITION_INFO_FILE             "partition_info.json"
+    #define LAP_PER_FILE_REGISTRY_FILE              "file_registry.json"
+    
+    // Storage categories
+    #define LAP_PER_CATEGORY_CURRENT                "current"
+    #define LAP_PER_CATEGORY_BACKUP                 "backup"
+    #define LAP_PER_CATEGORY_INITIAL                "initial"
+    #define LAP_PER_CATEGORY_UPDATE                 "update"
+
     enum class OpenMode : core::UInt32
     {
         kAtTheBeginning = 1 << 0,
@@ -53,7 +113,7 @@ namespace per
         kAppend         = 1 << 3,
         kBinary         = 1 << 4,
         kIn             = 1 << 5,
-        kOut            = 1 << 5,
+        kOut            = 1 << 6,  // Fixed: was 1 << 5, should be different from kIn
         kEnd            = 1 << 16
     };
 
@@ -238,8 +298,7 @@ namespace per
 
     enum class KvsBackendType : core::UInt32 
     {
-        kvsLocal            = 1 << 0,
-        kvsRemote           = 1 << 1,
+        kvsNone             = 0,        // No persistence backend (memory-only)
         kvsFile             = 1 << 16,
         kvsSqlite           = 1 << 17,
         kvsProperty         = 1 << 18
@@ -256,6 +315,145 @@ namespace per
         return ( static_cast< typename std::underlying_type< KvsBackendType >::type >( left ) & 
                     static_cast< typename std::underlying_type< KvsBackendType >::type >( right ) );
     }
+
+    // ========================================================================
+    // Storage Type Enumeration
+    // ========================================================================
+    
+    /**
+     * @brief Storage type enumeration for path generation
+     */
+    enum class StorageType : core::UInt8 {
+        kKeyValueStorage = 0,  // KVS storage
+        kFileStorage = 1       // File storage
+    };
+
+    // ========================================================================
+    // Persistency Configuration Structure
+    // ========================================================================
+    
+    /**
+     * @brief Persistency module configuration structure
+     * Loaded from Core::ConfigManager "persistency" module
+     */
+    struct PersistencyConfig {
+        core::String centralStorageURI{"/tmp/autosar_persistency"};
+        core::UInt32 replicaCount{3};
+        core::UInt32 minValidReplicas{2};
+        core::String checksumType{"CRC32"};
+        core::String contractVersion{"1.0.0"};
+        core::String deploymentVersion{"1.0.0"};
+        core::String redundancyHandling{"KEEP_REDUNDANCY"};
+        core::String updateStrategy{"KEEP_LAST_VALID"};
+        
+        struct KvsConfig {
+            core::String backendType{"file"};
+            core::String dataSourceType{""};
+            core::Size propertyBackendShmSize{1ul << 20};  // 1MB default for Property backend
+            core::String propertyBackendPersistence{"file"};  // "file" or "sqlite"
+        } kvs;
+    };
+
+    // ========================================================================
+    // Storage State Enumeration (used by CPersistencyManager)
+    // ========================================================================
+    
+    /**
+     * @brief Storage state for update and recovery management
+     */
+    enum class StorageState : core::UInt8 {
+        kNormal = 0,        // Normal operation
+        kUpdating,          // Update in progress
+        kRollingBack,       // Rollback in progress
+        kCorrupted,         // Data integrity compromised
+        kRecovering         // Recovery in progress
+    };
+
+    // ========================================================================
+    // File Storage Metadata Structure (managed by CPersistencyManager)
+    // ========================================================================
+    
+    /**
+     * @brief File Storage metadata for version and integrity management
+     * 
+     * Stored in: {storageUri}/.metadata/storage_info.json
+     */
+    struct FileStorageMetadata {
+        // Version information (SWS_PER_00463)
+        core::String contractVersion;       // Interface version
+        core::String deploymentVersion;     // Deployment version
+        core::String manifestVersion;       // Manifest version
+        
+        // Storage configuration
+        core::String storageUri;            // Base URI for this storage
+        core::String deploymentUri;         // Deployment-specific URI
+        core::UInt64 minimumSustainedSize;  // Minimum guaranteed size
+        core::UInt64 maximumAllowedSize;    // Maximum allowed size
+        
+        // Storage state
+        StorageState state;                 // Current storage state
+        
+        // Replica configuration (M-out-of-N redundancy, SWS_PER_00558)
+        core::UInt32 replicaCount;          // N: Total number of replicas
+        core::UInt32 minValidReplicas;      // M: Minimum valid replicas required
+        ChecksumType checksumType;          // Checksum algorithm for integrity
+        
+        // Encryption configuration (SWS_PER_00559)
+        core::Bool encryptionEnabled;
+        core::String encryptionAlgorithm;
+        core::String encryptionKeyId;
+        
+        // Timestamps
+        core::String creationTime;
+        core::String lastUpdateTime;
+        core::String lastAccessTime;
+        
+        // Backup information
+        core::Bool backupExists;
+        core::String backupVersion;
+        core::String backupCreationTime;
+    };
+
+    // ========================================================================
+    // Storage URI Structure (used by CFileStorageBackend)
+    // ========================================================================
+    
+    /**
+     * @brief File Storage URI structure
+     * 
+     * Format: {baseUri}/{category}/{logicalFileName}
+     * Example: /tmp/autosar_persistency_test/fs/instance1/current/config.json
+     */
+    struct StorageUri {
+        core::String baseUri;           // Base storage URI
+        core::String category;          // Category (current, backup, initial, update)
+        core::String fileName;          // Logical file name
+        
+        /**
+         * @brief Get full file path
+         * @return Full path: {baseUri}/{category}/{fileName}
+         */
+        core::String GetFullPath() const {
+            core::String result = baseUri;
+            result += "/";
+            result += category;
+            result += "/";
+            result += fileName;
+            return result;
+        }
+        
+        /**
+         * @brief Get category path
+         * @return Category path: {baseUri}/{category}
+         */
+        core::String GetCategoryPath() const {
+            core::String result = baseUri;
+            result += "/";
+            result += category;
+            return result;
+        }
+    };
+
 } // pm
 } // ara
 
